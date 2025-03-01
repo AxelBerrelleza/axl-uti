@@ -1,7 +1,11 @@
 import typer
 from .morning_star import *
+from .symbols import symbols
 from rich.console import Console
 from rich.table import Table
+from typing_extensions import Annotated
+from typing import Optional
+from rich import print
 
 stocks_app = typer.Typer()
 console = Console()
@@ -21,3 +25,15 @@ def search(text: str):
         )
 
     console.print(table)
+
+def getPerformanceIdBySymbol(symbol: str, byPass: bool):    
+    if byPass:
+        return symbol
+    else:
+        return symbols[symbol]
+
+@stocks_app.command(help="Retrieve financial info of a symbol")
+def financials(symbol: str, pid: Annotated[Optional[bool], typer.Option(help="Do the request with PerformanceId instead of symbol")] = False):
+    performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
+
+    print(morning_star.getFinancials(performanceId=performanceId))
