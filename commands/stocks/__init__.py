@@ -6,7 +6,7 @@ from rich.table import Table
 stocks_app = typer.Typer()
 console = Console()
 
-@stocks_app.command()
+@stocks_app.command(help="Find companies, ETFs inside and outside the United States")
 def search(text: str):
     response = morning_star.autocomplete(text)
 
