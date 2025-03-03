@@ -38,3 +38,58 @@ def financials(symbol: str, pid: TypeOfPerformanceIdOption = False):
     performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
 
     print(morning_star.getFinancials(performanceId=performanceId))
+
+@stocks_app.command(help="Show key stats of a symbol")
+def overview(symbol: str, pid: TypeOfPerformanceIdOption = False):
+    performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
+    response = morning_star.getOverview(performanceId)
+
+    print("Valuation")
+    table = Table(*response['valuationRatio'].keys())
+    values = ( str(val) for val in response['valuationRatio'].values() )
+    table.add_row(*values)
+    console.print(table)
+
+    print("Profiability")
+    table = Table(*response['profitabilityRatio'].keys())
+    values = ( str(val) for val in response['profitabilityRatio'].values() )
+    table.add_row(*values)
+    console.print(table)
+
+    print("Financial Health")
+    table = Table(*response['financialHealth'].keys())
+    values = ( str(val) for val in response['financialHealth'].values() )
+    table.add_row(*values)
+    console.print(table)
+
+    print("Efficiency")
+    table = Table(*response['efficiencyRatio'].keys())
+    values = ( str(val) for val in response['efficiencyRatio'].values() )
+    table.add_row(*values)
+    console.print(table)
+
+    print("Growth")
+    table = Table(*response['growthRatio'].keys())
+    values = ( str(val) for val in response['growthRatio'].values() )
+    table.add_row(*values)
+    console.print(table)
+    table = Table("Revenue 3Y Growth", "Industry Avg.")
+    values = ( str(val) for val in response['keyStatsQuoteJson']['revenue3YearGrowth'].values() )
+    table.add_row(*values)
+    console.print(table)
+    table = Table("Net Income 3Y Growth", "Industry Avg.")
+    values = ( str(val) for val in response['keyStatsQuoteJson']['netIncome3YearGrowth'].values() )
+    table.add_row(*values)
+    console.print(table)
+
+    print("VS Industry")
+    keyStats = response['keyStatsQuoteJson']
+    del keyStats['revenue3YearGrowth']
+    del keyStats['netIncome3YearGrowth']
+    del keyStats['freeCashFlow']
+    table = Table("", *keyStats.keys())
+    fromSymbol = ( str(val['stockValue']) for val in keyStats.values() )
+    table.add_row("Current", *fromSymbol)
+    industryAvg = ( str(val['indAvg']) for val in keyStats.values() )
+    table.add_row("Industry Avg.", *industryAvg)
+    console.print(table)

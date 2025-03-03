@@ -28,3 +28,11 @@ def getFinancials(performanceId: str):
     response.raise_for_status()
 
     return response.json()
+
+def getOverview(performanceId: str):
+    response = session.get(BASE_URL + '/stock/v2/key-stats/get-overview', params = {
+        "performanceId": performanceId,
+    })
+    response.raise_for_status()
+
+    return response.json()
