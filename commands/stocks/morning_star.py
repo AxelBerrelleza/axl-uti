@@ -36,3 +36,9 @@ def getOverview(performanceId: str):
     response.raise_for_status()
 
     return response.json()
+
+def getPriceVsFairValue(performanceId: str):
+    response = session.get(BASE_URL + '/stock/v2/get-price-fair-value/', params = { "performanceId": performanceId })
+    response.raise_for_status()
+
+    return response.json()

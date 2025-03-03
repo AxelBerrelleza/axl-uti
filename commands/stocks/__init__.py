@@ -93,3 +93,8 @@ def overview(symbol: str, pid: TypeOfPerformanceIdOption = False):
     industryAvg = ( str(val['indAvg']) for val in keyStats.values() )
     table.add_row("Industry Avg.", *industryAvg)
     console.print(table)
+
+@stocks_app.command(name='price-vs-fair-value', help="Morningstar estimate based on how much cash they think the company will generate")
+def priceVsFairValue(symbol: str, pid: TypeOfPerformanceIdOption = False):
+    performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
+    print(morning_star.getPriceVsFairValue(performanceId))
