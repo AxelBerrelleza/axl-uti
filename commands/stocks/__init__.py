@@ -15,7 +15,7 @@ TypeOfPerformanceIdOption = Annotated[Optional[bool], typer.Option(help="Do the 
 def search(text: str):
     response = morning_star.autocomplete(text)
 
-    table = Table("Name", "Region & symbol", "Type", "Exchange", "Performance Id")
+    table = Table("Name", "Region & symbol", "Type", "Exchange", "PerformanceId", "Instrument")
     for row in response:
         table.add_row(
             row["Name"],
@@ -23,7 +23,7 @@ def search(text: str):
             row["TypeName"],
             row["ExchangeShortName"],
             row["PerformanceId"],
-            row["Instrument"],
+            row["Instrument"] if row["Instrument"] is not None else None,
         )
 
     console.print(table)
