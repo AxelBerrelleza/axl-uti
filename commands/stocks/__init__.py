@@ -9,6 +9,7 @@ from rich import print
 
 stocks_app = typer.Typer()
 console = Console()
+TypeOfPerformanceIdOption = Annotated[Optional[bool], typer.Option(help="Do the request with PerformanceId instead of symbol")]
 
 @stocks_app.command(help="Find companies, ETFs inside and outside the United States")
 def search(text: str):
@@ -33,7 +34,7 @@ def getPerformanceIdBySymbol(symbol: str, byPass: bool):
         return symbols[symbol]
 
 @stocks_app.command(help="Retrieve financial info of a symbol")
-def financials(symbol: str, pid: Annotated[Optional[bool], typer.Option(help="Do the request with PerformanceId instead of symbol")] = False):
+def financials(symbol: str, pid: TypeOfPerformanceIdOption = False):
     performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
 
     print(morning_star.getFinancials(performanceId=performanceId))
