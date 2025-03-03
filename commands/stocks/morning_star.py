@@ -50,3 +50,11 @@ def getInstrumentsPrice(instruments: list):
     response.raise_for_status()
 
     return response.json()
+
+def getAvgValuation(performanceId: str):
+    response = session.get(BASE_URL + '/stock/v2/get-valuation/', params = {
+        "performanceId": performanceId
+    })
+    response.raise_for_status()
+
+    return response.json()

@@ -122,3 +122,29 @@ def price(symbols: List[str]):
         )
 
     console.print(table)
+
+@stocks_app.command(name='avg-valuation')
+def avgValuation(symbol: str, pid: TypeOfPerformanceIdOption = False):
+    performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
+    response = morning_star.getAvgValuation(performanceId)
+    
+    headers: list = response['Collapsed']['columnDefs']
+    del headers[0]
+    headers.reverse()
+    table = Table("Metric", *headers)
+    joinedRows = response['Collapsed']['rows'] + response['Expanded']['rows']
+    for row in joinedRows:
+        values: list = row['datum']
+        values.reverse()
+        table.add_row(
+            row['label'],
+            *values,
+            end_section=True
+        )
+
+    console.print(table)
+
+    footer = response['Collapsed']['footer']
+    print(
+        f'As of "{footer['asOfDate'][:-7]}", Index is: {footer['indexName']}. Currency: {footer['enterpriseValueCurrency']}'
+    )
