@@ -42,3 +42,11 @@ def getPriceVsFairValue(performanceId: str):
     response.raise_for_status()
 
     return response.json()
+
+def getInstrumentsPrice(instruments: list):
+    response = session.get(BASE_URL + '/stock/v2/get-instruments/', params = {
+        "instrumentIds": '126.1.' + ',126.1.'.join(instruments)
+    })
+    response.raise_for_status()
+
+    return response.json()

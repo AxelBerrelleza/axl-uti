@@ -4,7 +4,7 @@ from .symbols import symbols
 from rich.console import Console
 from rich.table import Table
 from typing_extensions import Annotated
-from typing import Optional
+from typing import Optional, List
 from rich import print
 
 stocks_app = typer.Typer()
@@ -22,7 +22,8 @@ def search(text: str):
             row["RegionAndTicker"],
             row["TypeName"],
             row["ExchangeShortName"],
-            row["PerformanceId"]
+            row["PerformanceId"],
+            row["Instrument"],
         )
 
     console.print(table)
@@ -98,3 +99,26 @@ def overview(symbol: str, pid: TypeOfPerformanceIdOption = False):
 def priceVsFairValue(symbol: str, pid: TypeOfPerformanceIdOption = False):
     performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
     print(morning_star.getPriceVsFairValue(performanceId))
+
+@stocks_app.command(help="")
+def price(symbols: List[str]):    
+    response = morning_star.getInstrumentsPrice(symbols)
+
+    table = Table("Last", "%", "Change", "Last close", "52w High", "52w Low", "MarketCap", "Currency", "ExchangeId")
+    for data in response:
+        color = 'green' if data['dayChange'] >= 0 else 'red'
+        currencyF = data['currencySymbol'] + '{:,.3f}'
+        withColorF = '[%s]%s' % (color, data['currencySymbol']) + '{:,.3f}'
+        table.add_row(
+            withColorF.format(data['lastPrice']),
+            '[%s]%.3f%%' % (color, data['dayChangePer']),
+            withColorF.format(data['dayChange']),
+            currencyF.format(data['lastClose']),
+            currencyF.format(data['yearRangeHigh']),
+            currencyF.format(data['yearRangeLow']),
+            currencyF.format(data['marketCap']),
+            data['currencyCode'],
+            data['exchangeID'],
+        )
+
+    console.print(table)
