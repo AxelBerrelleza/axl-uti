@@ -58,3 +58,11 @@ def getAvgValuation(performanceId: str):
     response.raise_for_status()
 
     return response.json()
+
+def getOperatingEfficency(performanceId: str):
+    response = session.get(BASE_URL + '/stock/v2/key-stats/get-operating-efficiency/', params = {
+        "performanceId": performanceId
+    })
+    response.raise_for_status()
+
+    return response.json()

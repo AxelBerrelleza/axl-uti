@@ -148,3 +148,42 @@ def avgValuation(symbol: str, pid: TypeOfPerformanceIdOption = False):
     print(
         f'As of "{footer['asOfDate'][:-7]}", Index is: {footer['indexName']}. Currency: {footer['enterpriseValueCurrency']}'
     )
+
+@stocks_app.command(name='operating-efficiency')
+def operatingEfficiency(symbol: str, pid: TypeOfPerformanceIdOption = False):
+    performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
+    response = morning_star.getOperatingEfficency(performanceId)
+
+    data: list = response['dataList']
+    table = Table(
+        'FY', 'MS-end-date', 'Gross Mrgn', 'Operating Mrgn', 'Net Mrgn', 'Ebitda Mrgn',
+        'TaxRate', 'ROA', 'ROE', 'ROIC', 'Interest Coverage'
+    )
+    dateCells = ['fiscalPeriodYear', 'morningstarEndingDate']
+    numericCells = [
+        'grossMargin', 'operatingMargin', 'netMargin', 'ebitdaMargin', 
+        'taxRate', 'roa', 'roe', 'roic', 'interestCoverage'
+    ]
+    for row in data:        
+        table.add_row(
+            *( row[cell][:10] if row[cell] != None else "" for cell in dateCells ),
+            *( '%.3f' % row[cell] if row[cell] != None else "" for cell in numericCells )
+        )
+    console.print(table)
+
+    table = Table(
+        'FY', 'MS-end-date', 'DaysInSales', 'DaysInInventory', 'DaysInPayment', 
+        'CashConversionCycle', 'ReceivableTurnover', 'InventoryTurnover', 'FixedAssetsTurnover',
+        'AssetsTurnover',
+    )
+    numericCells = [
+        'daysInSales', 'daysInInventory', 'daysInPayment', 'cashConversionCycle', 'receivableTurnover',
+        'inventoryTurnover', 'fixedAssetsTurnover', 'assetsTurnover',        
+    ]
+    for row in data:
+        table.add_row(
+            *( row[cell][:10] if row[cell] != None else "" for cell in dateCells ),
+            *( '%.3f' % row[cell] if row[cell] != None else "" for cell in numericCells )
+        )
+
+    console.print(table)
