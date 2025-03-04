@@ -6,6 +6,7 @@ from rich.table import Table
 from typing_extensions import Annotated
 from typing import Optional, List
 from rich import print
+from .SpreedSheetComparation import SpreadSheetComparation
 
 stocks_app = typer.Typer()
 console = Console()
@@ -187,3 +188,12 @@ def operatingEfficiency(symbol: str, pid: TypeOfPerformanceIdOption = False):
         )
 
     console.print(table)
+
+@stocks_app.command()
+def comparator(symbols: List[str], pid: TypeOfPerformanceIdOption = False):
+    performanceIds: list = (getPerformanceIdBySymbol(symbol, byPass=pid) for symbol in symbols)
+    # print(", ".join(performanceIds))
+    comparation = SpreadSheetComparation()
+    comparation.symbols = symbols
+    comparation.performanceIds = performanceIds
+    comparation.do()
