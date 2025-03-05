@@ -1,3 +1,4 @@
+from enum import StrEnum
 from dotenv import load_dotenv
 from os import getenv
 import requests
@@ -9,6 +10,8 @@ headers = {
     "x-rapidapi-host": "morning-star.p.rapidapi.com",
     "x-rapidapi-key": getenv("MS_API_KEY"),
 }
+class Endpoints(StrEnum):
+    OVERVIEW = BASE_URL + '/stock/v2/key-stats/get-overview/'
 
 session = requests.Session()
 session.headers = headers
@@ -30,7 +33,7 @@ def getFinancials(performanceId: str):
     return response.json()
 
 def getOverview(performanceId: str):
-    response = session.get(BASE_URL + '/stock/v2/key-stats/get-overview', params = {
+    response = session.get(Endpoints.OVERVIEW, params = {
         "performanceId": performanceId,
     })
     response.raise_for_status()

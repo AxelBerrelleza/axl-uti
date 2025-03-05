@@ -1,0 +1,8 @@
+# Specifies only dev-specific requirements
+# imports the common ones too
+-r common.txt
+iniconfig==2.0.0
+packaging==24.2
+pluggy==1.5.0
+pytest==8.3.5
+requests-mock==1.12.1
