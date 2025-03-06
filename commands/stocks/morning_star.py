@@ -11,7 +11,9 @@ headers = {
     "x-rapidapi-key": getenv("MS_API_KEY"),
 }
 class Endpoints(StrEnum):
-    OVERVIEW = BASE_URL + '/stock/v2/key-stats/get-overview/'
+    __stocks: str = '/stock/v2'
+    OVERVIEW = BASE_URL + __stocks + '/key-stats/get-overview/'
+    INSTRUMENTS = BASE_URL + __stocks + '/get-instruments/'
 
 session = requests.Session()
 session.headers = headers
@@ -47,7 +49,7 @@ def getPriceVsFairValue(performanceId: str):
     return response.json()
 
 def getInstrumentsPrice(instruments: list):
-    response = session.get(BASE_URL + '/stock/v2/get-instruments/', params = {
+    response = session.get(Endpoints.INSTRUMENTS, params = {
         "instrumentIds": '126.1.' + ',126.1.'.join(instruments)
     })
     response.raise_for_status()

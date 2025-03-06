@@ -16,11 +16,12 @@ def test_help():
     assert result.stdout != None
 
 def test_command(requests_mock):
-    requests_mock.get(Endpoints.OVERVIEW, json=APIResponses.MS.OVERVIEW)
     symbols = ['GOOGL', 'AMZN']
+    requests_mock.get(Endpoints.OVERVIEW, json=APIResponses.MS.OVERVIEW)
+    requests_mock.get(Endpoints.INSTRUMENTS, json=APIResponses.MS.instruments(len(symbols)))
     result = runner.invoke(stocks_app, ['comparator', *symbols])
     
-    print(result)
+    logger.debug(result.stdout)
     assert 'Loading' in result.stdout
     assert 'Finished' in result.stdout
     
@@ -30,7 +31,12 @@ def test_command(requests_mock):
     initRow = SpreadSheetComparation.initialRow
     
     iter = 0
-    for cells in sheet.iter_cols(min_col=initColumn, max_col=len(symbols) + initColumn - 1, min_row=initRow, max_row=15):
+    for cells in sheet.iter_cols(
+        min_col=initColumn, 
+        max_col=len(symbols) + initColumn - 1, 
+        min_row=initRow, 
+        max_row=20
+    ):
         logger.info(list(( c.value for c in cells )))
         assert cells[0].value == symbols[iter], 'the headers'
         # logger.info(cells[SpreadSheetComparation.rowMap['PER'] - initRow].value)
@@ -38,5 +44,7 @@ def test_command(requests_mock):
         assert cells[SpreadSheetComparation.rowMap['PCF'] - initRow].value != None
         assert cells[SpreadSheetComparation.rowMap['PS'] - initRow].value != None
         assert cells[SpreadSheetComparation.rowMap['PBV'] - initRow].value != None
+
+        assert cells[SpreadSheetComparation.rowMap['price'] - initRow].value != None
 
         iter += 1

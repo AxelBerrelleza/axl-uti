@@ -19,3 +19,28 @@ class MS:
             'freeCashFlow': {'cashFlowTTM': '70031000000', 'date': '2024-12-31T06:00:00.000'}
         }
     }
+
+    def instruments(count: int = 1):
+        _INSTRUMENT = {
+            'status': 'OK',
+            'lastPrice': 116.56,
+            'lastClose': 117.14,
+            'tradingStatus': 'Closed',
+            'marketCap': 53409182444.24,
+            'yearRangeHigh': 181.86,
+            'yearRangeLow': 112.53,
+            'currencyCode': 'USD',
+            'currencySymbol': '$',
+            'listedCurrency': 'USD',
+            'tradedCurrency': None,
+            'exchangeID': 'XNYS',
+            'exchangeName': 'New York Stock Exchange',
+            'exchangeTimeZone': 'EST',
+            'type': 'Equity',
+            'dayChange': -0.58,
+            'dayChangePer': -0.4951,
+            'message': '126.1.TGT',
+            'lastCloseAsOfDate': None
+        }
+        
+        return [_INSTRUMENT for _ in range(0, count)]

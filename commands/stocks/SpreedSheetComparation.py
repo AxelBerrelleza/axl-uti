@@ -43,6 +43,8 @@ class SpreadSheetComparation:
         sheet: Worksheet = self.workbook.active
         self._loadSymbolsAsHeaders(sheet)
         self._loadOverviewData(sheet)
+        self._loadInstrumentsPrice(sheet)
+        
         self.workbook.save(filename=self.outputFilename)
         print("Finished")
 
@@ -93,3 +95,11 @@ class SpreadSheetComparation:
                 row=self.rowMap['PBV'], 
                 column=self.initialColumn + key
             ).value = response['valuationRatio']['priceToBook']
+
+    def _loadInstrumentsPrice(self, sheet: Worksheet):
+        response = getInstrumentsPrice(self.symbols)        
+        for key, data in enumerate(response):
+            sheet.cell(
+                row=self.rowMap['price'],
+                column=self.initialColumn + key
+            ).value = data['lastPrice']
