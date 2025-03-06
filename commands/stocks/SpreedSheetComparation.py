@@ -14,7 +14,7 @@ class SpreadSheetComparation:
     symbols: list
     outputFilename: str = 'comparation.xlsx'
     initialColumn: int = 3
-    # initialRow: int = 3
+    initialRow: int = 2
     rowMap: dict = {
         'currentRatio': 3,
         'quickRatio': 4,

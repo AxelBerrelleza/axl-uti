@@ -26,8 +26,17 @@ def test_command(requests_mock):
     
     xlDoc = load_workbook(filename='comparation.xlsx', data_only=True)
     sheet: Worksheet = xlDoc.active
-    for key, symbol in enumerate(symbols):
-        assert sheet.cell(row=2, column=SpreadSheetComparation.initialColumn + key).value == symbol
-        
-    for cells in sheet.iter_cols(min_col=SpreadSheetComparation.initialColumn, min_row=3, max_col=4, max_row=15):
+    initColumn = SpreadSheetComparation.initialColumn
+    initRow = SpreadSheetComparation.initialRow
+    
+    iter = 0
+    for cells in sheet.iter_cols(min_col=initColumn, max_col=len(symbols) + initColumn - 1, min_row=initRow, max_row=15):
         logger.info(list(( c.value for c in cells )))
+        assert cells[0].value == symbols[iter], 'the headers'
+        # logger.info(cells[SpreadSheetComparation.rowMap['PER'] - initRow].value)
+        assert cells[SpreadSheetComparation.rowMap['PER'] - initRow].value != None
+        assert cells[SpreadSheetComparation.rowMap['PCF'] - initRow].value != None
+        assert cells[SpreadSheetComparation.rowMap['PS'] - initRow].value != None
+        assert cells[SpreadSheetComparation.rowMap['PBV'] - initRow].value != None
+
+        iter += 1
