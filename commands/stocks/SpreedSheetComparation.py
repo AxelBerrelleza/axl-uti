@@ -55,8 +55,8 @@ class SpreadSheetComparation:
             sheet.cell(row=titleRow, column=self.initialColumn + key).value = symbol
     
     def _loadOverviewData(self, sheet: Worksheet):
-        for key, symbol in enumerate(self.symbols):
-            response = getOverview(symbol)
+        for key, perId in enumerate(self.performanceIds):
+            response = getOverview(perId)
 
             sheet.cell(
                 row=self.rowMap['currentRatio'], 
@@ -119,8 +119,8 @@ class SpreadSheetComparation:
             except ValueError:
                 return None
         
-        for key, symbol in enumerate(self.symbols):
-            response = getAvgValuation(self.performanceIds)
+        for key, perId in enumerate(self.performanceIds):
+            response = getAvgValuation(perId)
             resp_rows = response['Collapsed']['rows']
 
             sheet.cell(

@@ -191,8 +191,8 @@ def operatingEfficiency(symbol: str, pid: TypeOfPerformanceIdOption = False):
 
 @stocks_app.command()
 def comparator(symbols: List[str], pid: TypeOfPerformanceIdOption = False):
-    performanceIds: list = (getPerformanceIdBySymbol(symbol, byPass=pid) for symbol in symbols)
-    # print(", ".join(performanceIds))
+    performanceIds = list(getPerformanceIdBySymbol(symbol, byPass=pid) for symbol in symbols)
+    
     comparation = SpreadSheetComparation()
     comparation.symbols = symbols
     comparation.performanceIds = performanceIds
