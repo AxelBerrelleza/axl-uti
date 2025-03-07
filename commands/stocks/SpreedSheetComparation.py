@@ -1,6 +1,14 @@
 from .morning_star import *
+import logging
 from openpyxl import Workbook, load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
+
+logging.basicConfig(filename='debug.log', level=logging.DEBUG)
+# logging.basicConfig(level=logging.INFO, handlers={
+#     logging.FileHandler('debug.log'),
+#     logging.StreamHandler()
+# })
+logger = logging.getLogger(__name__)
 
 class SpreadSheetComparation:
     """
@@ -41,11 +49,15 @@ class SpreadSheetComparation:
 
     def do(self):
         sheet: Worksheet = self.workbook.active
-        self._loadSymbolsAsHeaders(sheet)
-        self._loadOverviewData(sheet)
-        self._loadInstrumentsPrice(sheet)
-        self._loadPastAvgValuation(sheet)
-        
+        try:
+            self._loadSymbolsAsHeaders(sheet)
+            self._loadOverviewData(sheet)
+            self._loadInstrumentsPrice(sheet)
+            self._loadPastAvgValuation(sheet)
+
+        except Exception as ex:
+            logger.error(f"{ ex }")
+
         self.workbook.save(filename=self.outputFilename)
         print("Finished")
 
@@ -111,12 +123,12 @@ class SpreadSheetComparation:
         PCF_index = 2
         PBV_index = 3
         def getFiveYearValue(index, rows):
-            pastData = rows[index]['datum'] 
+            pastData: list = rows[index]['datum'] 
             penultimateIndex = len(pastData) - 2
             val = pastData[penultimateIndex]
             try:
                 return float(val)
-            except ValueError:
+            except (ValueError, TypeError):
                 return None
         
         for key, perId in enumerate(self.performanceIds):
