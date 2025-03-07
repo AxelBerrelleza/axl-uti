@@ -44,3 +44,96 @@ class MS:
         }
         
         return [_INSTRUMENT for _ in range(0, count)]
+
+    AVG_VALUATION = {
+        'Collapsed': {
+            'rows': [
+                {'label': 'Price/Sales', 'salDataId': 'price.sales.label', 'datum': ['3.18', '2.8253', '3.5613', '3.392', '3.496', '4.7598', '3.7405', '1.7092', '2.8507', '3.779', '3.4249', '3.1258', '2.975'], 'subLevel': ''},
+                {
+                    'label': 'Price/Earnings',
+                    'salDataId': 'price.earnings.label',
+                    'datum': ['951.9577', '171.595', '297.5751', '84.0969', '81.8715', '95.2319', '65.213', '76.3984', '79.5497', '46.8782', '36.8535', '70.7129', '25.6805'],
+                    'subLevel': ''
+                },
+                {
+                    'label': 'Price/Cash Flow',
+                    'salDataId': 'price.cash.flow.label',
+                    'datum': ['94.0502', '107.0845', '263.6281', '19.1414', '23.7463', '33.3578', '25.3499', '14.0008', '18.3273', '19.2337', '16.6259', '21.2279', '17.9437'],
+                    'subLevel': ''
+                },
+                {
+                    'label': 'Price/Book',
+                    'salDataId': 'price.book.label',
+                    'datum': ['25.5022', '20.0308', '22.8601', '18.7722', '16.1867', '19.7521', '14.0217', '6.2305', '8.578', '8.8983', '7.5492', '10.4751', '4.4777'],
+                    'subLevel': ''
+                }
+            ],
+            'columnDefs': ['Calendar', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', 'Current', '5-Yr', 'Index'],
+            'columnDefs_labels': [
+                'tabular.data.label.column.year',
+                '2015',
+                '2016',
+                '2017',
+                '2018',
+                '2019',
+                '2020',
+                '2021',
+                '2022',
+                '2023',
+                '2024',
+                'valuation.headers.current',
+                'valuation.headers.fiveyear',
+                'valuation.headers.index'
+            ],
+            'userType': None,
+            'footer': {'asOfLabel': 'As of', 'asOfDate': '2025-03-04T00:00:00.000', 'indexLabel': 'Index:', 'indexName': 'Morningstar US Market TR USD', 'enterpriseValueCurrency': 'USD'}
+        },
+        'Expanded': {
+            'rows': [
+                {
+                    'label': 'Price/Forward Earnings',
+                    'salDataId': 'price.forward.earnings.label',
+                    'datum': [None, '70.0813', '129.5094', '38.2278', '47.332', '45.2088', '30.2489', '41.3793', '39.4649', '27.2027', '31.0198', '51.0217', None],
+                    'subLevel': ''
+                },
+                {'label': 'PEG Ratio', 'salDataId': 'peg.ratio.label', 'datum': ['8.8934', '9.4668', '2.5239', '0.649', '0.639', '0.8136', '1.0262', '1.8583', '4.844', '1.4246', '0.999', '2.1592', None], 'subLevel': ''},
+                {'label': 'Earnings Yield %', 'salDataId': 'earnings.yield.label', 'datum': ['0.11', '0.58', '0.34', '1.19', '1.22', '1.05', '1.53', '1.31', '1.26', '2.13', '2.71', '1.13', None], 'subLevel': ''},
+                {
+                    'label': 'Enterprise Value (Bil)',
+                    'salDataId': 'enterprise.value.label',
+                    'datum': ['310.65', '346.17', '563.94', '729.34', '932.28', '1647.28', '1725.92', '926.53', '1642.97', '2353.53', '2189.52', '1119.42', None],
+                    'subLevel': '',
+                    'orderOfMagnitude': 'Bil'
+                },
+                {
+                    'label': 'Enterprise Value/EBIT',
+                    'salDataId': 'enterprise.value.ebit.label',
+                    'datum': ['216.9319', '85.5589', '157.6118', '67.5623', '66.4303', '76.6607', '53.4456', '80.8983', '69.6795', '40.4595', '33.003', '60.2871', None],
+                    'subLevel': ''
+                },
+                {
+                    'label': 'Enterprise Value/EBITDA',
+                    'salDataId': 'enterprise.value.ebitda.label',
+                    'datum': ['42.3167', '29.7987', '40.7026', '28.7457', '27.4888', '36.3711', '26.7979', '18.5191', '22.9571', '21.5615', '18.378', '25.1174', None],
+                    'subLevel': ''
+                }
+            ],
+            'columnDefs': ['Calendar', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', 'Current', '5-Yr', 'Index'],
+            'columnDefs_labels': [
+                'tabular.data.label.column.year',
+                '2015',
+                '2016',
+                '2017',
+                '2018',
+                '2019',
+                '2020',
+                '2021',
+                '2022',
+                '2023',
+                '2024',
+                'valuation.headers.current',
+                'valuation.headers.fiveyear',
+                'valuation.headers.index'
+            ]
+        }
+    }

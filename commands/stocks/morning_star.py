@@ -14,6 +14,7 @@ class Endpoints(StrEnum):
     __stocks: str = '/stock/v2'
     OVERVIEW = BASE_URL + __stocks + '/key-stats/get-overview/'
     INSTRUMENTS = BASE_URL + __stocks + '/get-instruments/'
+    AVG_VALUATION = BASE_URL + __stocks + '/get-valuation/'
 
 session = requests.Session()
 session.headers = headers
@@ -57,7 +58,7 @@ def getInstrumentsPrice(instruments: list):
     return response.json()
 
 def getAvgValuation(performanceId: str):
-    response = session.get(BASE_URL + '/stock/v2/get-valuation/', params = {
+    response = session.get(Endpoints.AVG_VALUATION, params = {
         "performanceId": performanceId
     })
     response.raise_for_status()

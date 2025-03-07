@@ -44,6 +44,7 @@ class SpreadSheetComparation:
         self._loadSymbolsAsHeaders(sheet)
         self._loadOverviewData(sheet)
         self._loadInstrumentsPrice(sheet)
+        self._loadPastAvgValuation(sheet)
         
         self.workbook.save(filename=self.outputFilename)
         print("Finished")
@@ -103,3 +104,38 @@ class SpreadSheetComparation:
                 row=self.rowMap['price'],
                 column=self.initialColumn + key
             ).value = data['lastPrice']
+
+    def _loadPastAvgValuation(self, sheet: Worksheet):
+        PS_index = 0
+        PER_index = 1
+        PCF_index = 2
+        PBV_index = 3
+        def getFiveYearValue(index, rows):
+            pastData = rows[index]['datum'] 
+            penultimateIndex = len(pastData) - 2
+            val = pastData[penultimateIndex]
+            try:
+                return float(val)
+            except ValueError:
+                return None
+        
+        for key, symbol in enumerate(self.symbols):
+            response = getAvgValuation(self.performanceIds)
+            resp_rows = response['Collapsed']['rows']
+
+            sheet.cell(
+                row=self.rowMap['PER-5yr'],
+                column=self.initialColumn + key
+            ).value = getFiveYearValue(PER_index, resp_rows)
+            sheet.cell(
+                row=self.rowMap['PCF-5yr'],
+                column=self.initialColumn + key
+            ).value = getFiveYearValue(PCF_index, resp_rows)
+            sheet.cell(
+                row=self.rowMap['PS-5yr'],
+                column=self.initialColumn + key
+            ).value = getFiveYearValue(PS_index, resp_rows)
+            sheet.cell(
+                row=self.rowMap['PBV-5yr'],
+                column=self.initialColumn + key
+            ).value = getFiveYearValue(PBV_index, resp_rows)

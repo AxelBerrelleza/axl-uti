@@ -19,6 +19,7 @@ def test_command(requests_mock):
     symbols = ['GOOGL', 'AMZN']
     requests_mock.get(Endpoints.OVERVIEW, json=APIResponses.MS.OVERVIEW)
     requests_mock.get(Endpoints.INSTRUMENTS, json=APIResponses.MS.instruments(len(symbols)))
+    requests_mock.get(Endpoints.AVG_VALUATION, json=APIResponses.MS.AVG_VALUATION)
     result = runner.invoke(stocks_app, ['comparator', *symbols])
     
     logger.debug(result.stdout)
@@ -29,17 +30,20 @@ def test_command(requests_mock):
     sheet: Worksheet = xlDoc.active
     initColumn = SpreadSheetComparation.initialColumn
     initRow = SpreadSheetComparation.initialRow
+    rowMap = SpreadSheetComparation.rowMap
     
     iter = 0
     for cells in sheet.iter_cols(
         min_col=initColumn, 
         max_col=len(symbols) + initColumn - 1, 
         min_row=initRow, 
-        max_row=20
+        max_row=40
     ):
-        logger.info(list(( c.value for c in cells )))
+        logger.info([ c.value for c in cells[:14] ])
+        logger.info([ c.value for c in cells[23:35] ])
+        
         assert cells[0].value == symbols[iter], 'the headers'
-        # logger.info(cells[SpreadSheetComparation.rowMap['PER'] - initRow].value)
+        
         assert cells[SpreadSheetComparation.rowMap['PER'] - initRow].value != None
         assert cells[SpreadSheetComparation.rowMap['PCF'] - initRow].value != None
         assert cells[SpreadSheetComparation.rowMap['PS'] - initRow].value != None
