@@ -44,11 +44,16 @@ def test_command(requests_mock):
         
         assert cells[0].value == symbols[iter], 'the headers'
         
-        assert cells[SpreadSheetComparation.rowMap['PER'] - initRow].value != None
-        assert cells[SpreadSheetComparation.rowMap['PCF'] - initRow].value != None
-        assert cells[SpreadSheetComparation.rowMap['PS'] - initRow].value != None
-        assert cells[SpreadSheetComparation.rowMap['PBV'] - initRow].value != None
+        assert cells[rowMap['PER'] - initRow].value != None
+        assert cells[rowMap['PCF'] - initRow].value != None
+        assert cells[rowMap['PS'] - initRow].value != None
+        assert cells[rowMap['PBV'] - initRow].value != None
 
-        assert cells[SpreadSheetComparation.rowMap['price'] - initRow].value != None
+        assert cells[rowMap['price'] - initRow].value != None
+        
+        assert cells[rowMap['PER-5yr'] - initRow].value != None
+        assert cells[rowMap['PCF-5yr'] - initRow].value != None
+        assert cells[rowMap['PS-5yr'] - initRow].value != None
+        assert cells[rowMap['PBV-5yr'] - initRow].value != None
 
         iter += 1
