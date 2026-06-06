@@ -1,0 +1,7 @@
+- [x] Current & Quick ratios, + debt/equity (in overview financial health)
+- [x] Inventory turnover, days inventory, assets turnover (in key-stats/get-operating-efficency/, to many info for just 3 needed)
+- [x] ROE, net margin (in overview efficiency & profiability)
+- [x] PER, PCF, PS, PBV ratios (in overview valuation)
+- [x] price
+- [x] PER 5-yr, PCF 5-yr, PS 5-yr, PBV 5-yr ratios (in valuation)
+- price vs fair value could be added, but seems to be data expensive just to get one data
