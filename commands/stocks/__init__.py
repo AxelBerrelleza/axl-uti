@@ -1,6 +1,6 @@
 import typer
 from .morning_star import *
-from .symbols import symbols
+from .symbols import resolve as _resolve_symbol
 from rich.console import Console
 from rich.table import Table
 from typing_extensions import Annotated
@@ -29,11 +29,11 @@ def search(text: str):
 
     console.print(table)
 
-def getPerformanceIdBySymbol(symbol: str, byPass: bool):    
+def getPerformanceIdBySymbol(symbol: str, byPass: bool):
     if byPass:
         return symbol
     else:
-        return symbols[symbol]
+        return _resolve_symbol(symbol)
 
 @stocks_app.command(help="Retrieve financial info of a symbol")
 def financials(symbol: str, pid: TypeOfPerformanceIdOption = False):

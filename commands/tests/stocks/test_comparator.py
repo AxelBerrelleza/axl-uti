@@ -17,9 +17,11 @@ def test_help():
 
 def test_command(requests_mock):
     symbols = ['GOOGL', 'AMZN']
+
     requests_mock.get(Endpoints.OVERVIEW, json=APIResponses.MS.OVERVIEW)
     requests_mock.get(Endpoints.INSTRUMENTS, json=APIResponses.MS.instruments(len(symbols)))
     requests_mock.get(Endpoints.AVG_VALUATION, json=APIResponses.MS.AVG_VALUATION)
+
     result = runner.invoke(stocks_app, ['comparator', *symbols])
     
     logger.debug(result.stdout)

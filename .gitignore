@@ -173,6 +173,10 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/python
 
 backlog/
+openspec/
 *.xlsx
 
 opencode.json
+
+# User-managed symbol config (do not commit personal data)
+symbols.json

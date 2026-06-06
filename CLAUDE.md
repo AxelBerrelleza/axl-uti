@@ -23,7 +23,7 @@ pytest commands/tests/stocks/test_comparator.py -v
 ## Architecture
 - **CLI framework**: [Typer](https://typer.tiangolo.com/) — sub-commands registered in `main.py` from `commands/hello` and `commands/stocks`
 - **API**: Morningstar RapidAPI (`x-rapidapi-key` from `MS_API_KEY` env var, loaded via `dotenv` in `commands/stocks/morning_star.py`). Base URL: `https://morning-star.p.rapidapi.com`
-- **Symbol lookup**: `commands/stocks/symbols.py` maps tickers → PerformanceIds. Pass `--pid` flag to use raw PerformanceId instead.
+- **Symbol lookup**: `commands/stocks/symbols.py` is a loader module — it resolves tickers to PerformanceIds from a user-managed `symbols.json` config file (checked at `./symbols.json` first, then `~/.axl-uti/symbols.json`). Pass `--pid` flag to use a raw PerformanceId and bypass the lookup entirely.
 - **Spreadsheet output**: `comparator` command generates `comparation.xlsx` from `assets/base-sheet.xlsx` template
 - **Logging**: Writes to `debug.log` at DEBUG level (configured in `SpreedSheetComparation.py`)
 
