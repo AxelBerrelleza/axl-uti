@@ -5,6 +5,28 @@ from commands.tests.fixtures import APIResponses
 
 runner = CliRunner()
 
+def test_search(requests_mock):
+    requests_mock.get(
+        "https://morning-star.p.rapidapi.com/market/v3/auto-complete",
+        json=APIResponses.MS.AUTOCOMPLETE,
+    )
+    result = runner.invoke(stocks_app, ['search', 'AAPL'], env={"COLUMNS": "200"})
+    assert result.exit_code == 0
+
+    headers = ("Name", "Region & symbol", "Type", "Exchange", "PerformanceId", "Instrument")
+    for header in headers:
+        assert header in result.stdout, f"Missing header: {header}"
+
+    assert "Apple Inc" in result.stdout
+    assert "US | AAPL" in result.stdout
+    assert "Equity" in result.stdout
+    assert "XNAS" in result.stdout
+    assert "0P000000GY" in result.stdout
+    assert "126.1.AAPL" in result.stdout
+
+    assert "Apple Hospitality REIT Inc" in result.stdout
+    assert "126.1.APLE" in result.stdout
+
 def test_financials(requests_mock):
     requests_mock.get("https://morning-star.p.rapidapi.com/stock/v2/get-financials", json={"mock": "financials"})
     result = runner.invoke(stocks_app, ['financials', 'AAPL'], env={"COLUMNS": "200"})
@@ -15,7 +37,13 @@ def test_overview(requests_mock):
     requests_mock.get(Endpoints.OVERVIEW, json=APIResponses.MS.OVERVIEW)
     result = runner.invoke(stocks_app, ['overview', 'AAPL'], env={"COLUMNS": "200"})
     assert result.exit_code == 0
-    assert "Valuation" in result.stdout
+
+    sections = ("Valuation", "Profiability", "Financial Health", "Efficiency", "Growth", "VS Industry")
+    for section in sections:
+        assert section in result.stdout, f"Missing section: {section}"
+
+    for header in ("priceToBook", "priceToCashFlow", "priceToSales", "priceToEPS"):
+        assert header in result.stdout
 
 def test_price_vs_fair_value(requests_mock):
     requests_mock.get("https://morning-star.p.rapidapi.com/stock/v2/get-price-fair-value/", json={"mock": "fair_value"})
@@ -29,11 +57,20 @@ def test_price(requests_mock):
     assert result.exit_code == 0
     assert "$" in result.stdout
 
+    headers = ("Last", "%", "Change", "Last close", "52w High", "52w Low", "MarketCap", "Currency", "ExchangeId")
+    for header in headers:
+        assert header in result.stdout, f"Missing header: {header}"
+
 def test_avg_valuation(requests_mock):
     requests_mock.get(Endpoints.AVG_VALUATION, json=APIResponses.MS.AVG_VALUATION)
     result = runner.invoke(stocks_app, ['avg-valuation', 'AAPL'], env={"COLUMNS": "200"})
     assert result.exit_code == 0
+
+    assert "Metric" in result.stdout
     assert "Price/Sales" in result.stdout
+    assert "Price/Earnings" in result.stdout
+    assert "Price/Cash Flow" in result.stdout
+    assert "Price/Book" in result.stdout
 
 def test_operating_efficiency(requests_mock):
     mock_data = {
@@ -66,3 +103,18 @@ def test_operating_efficiency(requests_mock):
     assert result.exit_code == 0
     assert "2024" in result.stdout
     assert "44.500" in result.stdout
+
+    first_table_headers = (
+        "FY", "MS-end-date", "Gross Mrgn", "Operating Mrgn", "Net Mrgn", "Ebitda Mrgn",
+        "TaxRate", "ROA", "ROE", "ROIC", "Interest Coverage",
+    )
+    for header in first_table_headers:
+        assert header in result.stdout, f"Missing header: {header}"
+
+    second_table_headers = (
+        "DaysInSales", "DaysInInventory", "DaysInPayment",
+        "CashConversionCycle", "ReceivableTurnover", "InventoryTurnover",
+        "FixedAssetsTurnover", "AssetsTurnover",
+    )
+    for header in second_table_headers:
+        assert header in result.stdout, f"Missing header: {header}"

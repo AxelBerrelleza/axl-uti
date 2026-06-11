@@ -2,6 +2,24 @@ class MS:
     """
     From Morningstar API
     """
+    AUTOCOMPLETE = [
+        {
+            "Name": "Apple Inc",
+            "RegionAndTicker": "US | AAPL",
+            "TypeName": "Equity",
+            "ExchangeShortName": "XNAS",
+            "PerformanceId": "0P000000GY",
+            "Instrument": "126.1.AAPL",
+        },
+        {
+            "Name": "Apple Hospitality REIT Inc",
+            "RegionAndTicker": "US | APLE",
+            "TypeName": "Equity",
+            "ExchangeShortName": "XNYS",
+            "PerformanceId": "0P0001C7SA",
+            "Instrument": "126.1.APLE",
+        },
+    ]
     OVERVIEW = {
         'valuationRatio': {'asOfDate': '2025-02-27', 'priceToBook': 9.643202, 'priceToCashFlow': 23.364486, 'priceToSales': 11.198208, 'priceToEPS': 31.630137},
         'growthRatio': {'reportDate': '2024-06-30', 'revenue': 0.134006, 'operatingIncome': 0.161067, 'netIncome': 0.128841, 'eps': 0.135957},
