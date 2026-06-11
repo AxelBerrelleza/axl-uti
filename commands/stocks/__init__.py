@@ -7,6 +7,7 @@ from typing_extensions import Annotated
 from typing import Optional, List
 from rich import print
 from .SpreedSheetComparation import SpreadSheetComparation
+from commands.utils.tables import Tables
 
 stocks_app = typer.Typer()
 console = Console()
@@ -16,18 +17,14 @@ TypeOfPerformanceIdOption = Annotated[Optional[bool], typer.Option(help="Do the 
 def search(text: str):
     response = morning_star.autocomplete(text)
 
-    table = Table("Name", "Region & symbol", "Type", "Exchange", "PerformanceId", "Instrument")
-    for row in response:
-        table.add_row(
-            row["Name"],
-            row["RegionAndTicker"],
-            row["TypeName"],
-            row["ExchangeShortName"],
-            row["PerformanceId"],
-            row["Instrument"] if row["Instrument"] is not None else None,
-        )
-
-    console.print(table)
+    console.print(Tables.from_list(response, columns=[
+        "Name",
+        ("Region & symbol", "RegionAndTicker"),
+        ("Type", "TypeName"),
+        ("Exchange", "ExchangeShortName"),
+        "PerformanceId",
+        "Instrument",
+    ]))
 
 def getPerformanceIdBySymbol(symbol: str, byPass: bool):
     if byPass:
@@ -47,42 +44,21 @@ def overview(symbol: str, pid: TypeOfPerformanceIdOption = False):
     response = morning_star.getOverview(performanceId)
 
     print("Valuation")
-    table = Table(*response['valuationRatio'].keys())
-    values = ( str(val) for val in response['valuationRatio'].values() )
-    table.add_row(*values)
-    console.print(table)
+    console.print(Tables.from_dict(response['valuationRatio']))
 
     print("Profiability")
-    table = Table(*response['profitabilityRatio'].keys())
-    values = ( str(val) for val in response['profitabilityRatio'].values() )
-    table.add_row(*values)
-    console.print(table)
+    console.print(Tables.from_dict(response['profitabilityRatio']))
 
     print("Financial Health")
-    table = Table(*response['financialHealth'].keys())
-    values = ( str(val) for val in response['financialHealth'].values() )
-    table.add_row(*values)
-    console.print(table)
+    console.print(Tables.from_dict(response['financialHealth']))
 
     print("Efficiency")
-    table = Table(*response['efficiencyRatio'].keys())
-    values = ( str(val) for val in response['efficiencyRatio'].values() )
-    table.add_row(*values)
-    console.print(table)
+    console.print(Tables.from_dict(response['efficiencyRatio']))
 
     print("Growth")
-    table = Table(*response['growthRatio'].keys())
-    values = ( str(val) for val in response['growthRatio'].values() )
-    table.add_row(*values)
-    console.print(table)
-    table = Table("Revenue 3Y Growth", "Industry Avg.")
-    values = ( str(val) for val in response['keyStatsQuoteJson']['revenue3YearGrowth'].values() )
-    table.add_row(*values)
-    console.print(table)
-    table = Table("Net Income 3Y Growth", "Industry Avg.")
-    values = ( str(val) for val in response['keyStatsQuoteJson']['netIncome3YearGrowth'].values() )
-    table.add_row(*values)
-    console.print(table)
+    console.print(Tables.from_dict(response['growthRatio']))
+    console.print(Tables.from_dict(response['keyStatsQuoteJson']['revenue3YearGrowth']))
+    console.print(Tables.from_dict(response['keyStatsQuoteJson']['netIncome3YearGrowth']))
 
     print("VS Industry")
     keyStats = response['keyStatsQuoteJson']
@@ -105,24 +81,29 @@ def priceVsFairValue(symbol: str, pid: TypeOfPerformanceIdOption = False):
 def price(symbols: List[str]):    
     response = morning_star.getInstrumentsPrice(symbols)
 
-    table = Table("Last", "%", "Change", "Last close", "52w High", "52w Low", "MarketCap", "Currency", "ExchangeId")
     for data in response:
         color = 'green' if data['dayChange'] >= 0 else 'red'
-        currencyF = data['currencySymbol'] + '{:,.3f}'
-        withColorF = '[%s]%s' % (color, data['currencySymbol']) + '{:,.3f}'
-        table.add_row(
-            withColorF.format(data['lastPrice']),
-            '[%s]%.3f%%' % (color, data['dayChangePer']),
-            withColorF.format(data['dayChange']),
-            currencyF.format(data['lastClose']),
-            currencyF.format(data['yearRangeHigh']),
-            currencyF.format(data['yearRangeLow']),
-            currencyF.format(data['marketCap']),
-            data['currencyCode'],
-            data['exchangeID'],
-        )
+        currency_fmt_str = data['currencySymbol'] + '{:,.3f}'
+        colored_fmt_str = '[%s]%s' % (color, data['currencySymbol']) + '{:,.3f}'
+        data['_last'] = colored_fmt_str.format(data['lastPrice'])
+        data['_pct'] = '[%s]%.3f%%' % (color, data['dayChangePer'])
+        data['_change'] = colored_fmt_str.format(data['dayChange'])
+        data['_close'] = currency_fmt_str.format(data['lastClose'])
+        data['_high'] = currency_fmt_str.format(data['yearRangeHigh'])
+        data['_low'] = currency_fmt_str.format(data['yearRangeLow'])
+        data['_mcap'] = currency_fmt_str.format(data['marketCap'])
 
-    console.print(table)
+    console.print(Tables.from_list(response, columns=[
+        ("Last", "_last"),
+        ("%", "_pct"),
+        ("Change", "_change"),
+        ("Last close", "_close"),
+        ("52w High", "_high"),
+        ("52w Low", "_low"),
+        ("MarketCap", "_mcap"),
+        ("Currency", "currencyCode"),
+        ("ExchangeId", "exchangeID"),
+    ]))
 
 @stocks_app.command(name='avg-valuation')
 def avgValuation(symbol: str, pid: TypeOfPerformanceIdOption = False):
@@ -156,38 +137,36 @@ def operatingEfficiency(symbol: str, pid: TypeOfPerformanceIdOption = False):
     response = morning_star.getOperatingEfficency(performanceId)
 
     data: list = response['dataList']
-    table = Table(
-        'FY', 'MS-end-date', 'Gross Mrgn', 'Operating Mrgn', 'Net Mrgn', 'Ebitda Mrgn',
-        'TaxRate', 'ROA', 'ROE', 'ROIC', 'Interest Coverage'
-    )
-    dateCells = ['fiscalPeriodYear', 'morningstarEndingDate']
-    numericCells = [
-        'grossMargin', 'operatingMargin', 'netMargin', 'ebitdaMargin', 
-        'taxRate', 'roa', 'roe', 'roic', 'interestCoverage'
-    ]
-    for row in data:        
-        table.add_row(
-            *( row[cell][:10] if row[cell] != None else "" for cell in dateCells ),
-            *( '%.3f' % row[cell] if row[cell] != None else "" for cell in numericCells )
-        )
-    console.print(table)
 
-    table = Table(
-        'FY', 'MS-end-date', 'DaysInSales', 'DaysInInventory', 'DaysInPayment', 
-        'CashConversionCycle', 'ReceivableTurnover', 'InventoryTurnover', 'FixedAssetsTurnover',
-        'AssetsTurnover',
-    )
-    numericCells = [
-        'daysInSales', 'daysInInventory', 'daysInPayment', 'cashConversionCycle', 'receivableTurnover',
-        'inventoryTurnover', 'fixedAssetsTurnover', 'assetsTurnover',        
-    ]
-    for row in data:
-        table.add_row(
-            *( row[cell][:10] if row[cell] != None else "" for cell in dateCells ),
-            *( '%.3f' % row[cell] if row[cell] != None else "" for cell in numericCells )
-        )
+    date_fmt = lambda v: v[:10]
+    num_fmt = lambda v: '%.3f' % v
 
-    console.print(table)
+    console.print(Tables.from_list(data, columns=[
+        ("FY", "fiscalPeriodYear", date_fmt),
+        ("MS-end-date", "morningstarEndingDate", date_fmt),
+        ("Gross Mrgn", "grossMargin", num_fmt),
+        ("Operating Mrgn", "operatingMargin", num_fmt),
+        ("Net Mrgn", "netMargin", num_fmt),
+        ("Ebitda Mrgn", "ebitdaMargin", num_fmt),
+        ("TaxRate", "taxRate", num_fmt),
+        ("ROA", "roa", num_fmt),
+        ("ROE", "roe", num_fmt),
+        ("ROIC", "roic", num_fmt),
+        ("Interest Coverage", "interestCoverage", num_fmt),
+    ]))
+
+    console.print(Tables.from_list(data, columns=[
+        ("FY", "fiscalPeriodYear", date_fmt),
+        ("MS-end-date", "morningstarEndingDate", date_fmt),
+        ("DaysInSales", "daysInSales", num_fmt),
+        ("DaysInInventory", "daysInInventory", num_fmt),
+        ("DaysInPayment", "daysInPayment", num_fmt),
+        ("CashConversionCycle", "cashConversionCycle", num_fmt),
+        ("ReceivableTurnover", "receivableTurnover", num_fmt),
+        ("InventoryTurnover", "inventoryTurnover", num_fmt),
+        ("FixedAssetsTurnover", "fixedAssetsTurnover", num_fmt),
+        ("AssetsTurnover", "assetsTurnover", num_fmt),
+    ]))
 
 @stocks_app.command()
 def comparator(symbols: List[str], pid: TypeOfPerformanceIdOption = False):
