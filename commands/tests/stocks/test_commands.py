@@ -1,7 +1,15 @@
+from unittest.mock import patch
+
 import pytest
+import requests
 from typer.testing import CliRunner
 from commands.stocks import stocks_app, Endpoints
 from commands.tests.fixtures import APIResponses
+from commands.errors import (
+    ConfigMissingError,
+    ConfigInvalidError,
+)
+from commands.stocks.errors import SymbolNotFoundError
 
 runner = CliRunner()
 
@@ -118,3 +126,88 @@ def test_operating_efficiency(requests_mock):
     )
     for header in second_table_headers:
         assert header in result.stdout, f"Missing header: {header}"
+
+
+def _assert_no_traceback(output: str):
+    assert "Traceback (most recent call last)" not in output
+    assert 'File "' not in output
+
+
+class TestErrorHandling:
+    def test_missing_config_returns_exit_code_2(self):
+        with patch(
+            "commands.stocks.getPerformanceIdBySymbol",
+            side_effect=ConfigMissingError("Test config missing"),
+        ):
+            result = runner.invoke(stocks_app, ["overview", "AAPL"])
+        assert result.exit_code == 2
+        assert "Error:" in result.stdout
+        assert "config" in result.stdout.lower()
+        _assert_no_traceback(result.stdout)
+
+    def test_invalid_config_returns_exit_code_2(self):
+        with patch(
+            "commands.stocks.getPerformanceIdBySymbol",
+            side_effect=ConfigInvalidError("Invalid JSON in config"),
+        ):
+            result = runner.invoke(stocks_app, ["overview", "AAPL"])
+        assert result.exit_code == 2
+        assert "Error:" in result.stdout
+        assert "JSON" in result.stdout
+        _assert_no_traceback(result.stdout)
+
+    def test_unknown_ticker_returns_exit_code_1(self):
+        error = SymbolNotFoundError(ticker="XYZ", available="AAPL, MSFT")
+        with patch(
+            "commands.stocks.getPerformanceIdBySymbol",
+            side_effect=error,
+        ):
+            result = runner.invoke(stocks_app, ["overview", "XYZ"])
+        assert result.exit_code == 1
+        assert "Error:" in result.stdout
+        assert "XYZ" in result.stdout
+        _assert_no_traceback(result.stdout)
+
+    def test_api_401_returns_exit_code_3(self, requests_mock):
+        requests_mock.get(
+            "https://morning-star.p.rapidapi.com/market/v3/auto-complete",
+            status_code=401,
+        )
+        result = runner.invoke(stocks_app, ["search", "AAPL"])
+        assert result.exit_code == 3
+        assert "Error:" in result.stdout
+        assert "401" in result.stdout
+        _assert_no_traceback(result.stdout)
+
+    def test_api_500_returns_exit_code_3(self, requests_mock):
+        requests_mock.get(
+            "https://morning-star.p.rapidapi.com/market/v3/auto-complete",
+            status_code=500,
+        )
+        result = runner.invoke(stocks_app, ["search", "AAPL"])
+        assert result.exit_code == 3
+        assert "Error:" in result.stdout
+        _assert_no_traceback(result.stdout)
+
+    def test_network_timeout_returns_exit_code_3(self, requests_mock):
+        requests_mock.get(
+            "https://morning-star.p.rapidapi.com/market/v3/auto-complete",
+            exc=requests.exceptions.Timeout,
+        )
+        result = runner.invoke(stocks_app, ["search", "AAPL"])
+        assert result.exit_code == 3
+        assert "Error:" in result.stdout
+        assert "Network" in result.stdout
+        _assert_no_traceback(result.stdout)
+
+    def test_debug_flag_shows_traceback(self, requests_mock):
+        from main import app
+
+        requests_mock.get(
+            "https://morning-star.p.rapidapi.com/market/v3/auto-complete",
+            status_code=500,
+        )
+        result = runner.invoke(app, ["--debug", "stocks", "search", "AAPL"])
+        assert result.exit_code == 3
+        assert "Error:" in result.stdout
+        assert "Traceback (most recent call last)" in result.stdout

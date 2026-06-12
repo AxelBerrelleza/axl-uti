@@ -1,18 +1,10 @@
-"""
-Symbol config loader for axl-uti.
-
-Loads ticker → PerformanceId mappings from a user-managed JSON config file.
-Search order:
-  1. ./symbols.json        (project root — dev override)
-  2. ~/.axl-uti/symbols.json (user home — primary location)
-"""
-
 import json
 from pathlib import Path
+from commands.errors import ConfigMissingError, ConfigInvalidError
+from commands.stocks.errors import SymbolNotFoundError
 
 
 def _find_config() -> Path | None:
-    """Return the first symbols.json path that exists, or None."""
     candidates = [
         Path("./symbols.json"),
         Path.home() / ".axl-uti" / "symbols.json",
@@ -24,15 +16,9 @@ def _find_config() -> Path | None:
 
 
 def resolve(ticker: str) -> str:
-    """Return the PerformanceId for *ticker*.
-
-    Raises:
-        SystemExit: if no config file is found or the JSON is invalid.
-        KeyError: if the ticker is not present in the config.
-    """
     config_path = _find_config()
     if config_path is None:
-        raise FileNotFoundError(
+        raise ConfigMissingError(
             "Symbol config not found. "
             "Create ~/.axl-uti/symbols.json (see symbols.example.json for format)."
         )
@@ -40,14 +26,12 @@ def resolve(ticker: str) -> str:
     try:
         data: dict = json.loads(config_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        raise ValueError(
+        raise ConfigInvalidError(
             f"Invalid JSON in symbol config '{config_path}': {exc}"
         ) from exc
 
     if ticker not in data:
         available = ", ".join(sorted(data.keys()))
-        raise KeyError(
-            f"Ticker '{ticker}' not found. Available tickers: [{available}]"
-        )
+        raise SymbolNotFoundError(ticker=ticker, available=available)
 
     return data[ticker]

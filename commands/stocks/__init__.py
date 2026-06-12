@@ -1,21 +1,96 @@
+import traceback
+
+import click
 import typer
-from .morning_star import *
-from .symbols import resolve as _resolve_symbol
 from rich.console import Console
 from rich.table import Table
+from rich import print
 from typing_extensions import Annotated
 from typing import Optional, List
-from rich import print
+
+from .morning_star import *
+from .symbols import resolve as _resolve_symbol
 from .SpreedSheetComparation import SpreadSheetComparation
 from commands.utils.tables import Tables
+from commands.errors import (
+    AxlError,
+    ConfigMissingError,
+    ConfigInvalidError,
+    APIError,
+    APIAuthError,
+    APIRateLimitError,
+    APIServerError,
+    NetworkError,
+)
+from commands.stocks.errors import SymbolNotFoundError
 
 stocks_app = typer.Typer()
 console = Console()
+err_console = Console(stderr=True)
 TypeOfPerformanceIdOption = Annotated[Optional[bool], typer.Option(help="Do the request with PerformanceId instead of symbol")]
+
+
+def _get_debug() -> bool:
+    ctx = click.get_current_context(silent=True)
+    if ctx and ctx.obj and isinstance(ctx.obj, dict):
+        return ctx.obj.get("debug", False)
+    return False
+
+
+def _format_error(err: AxlError) -> int:
+    debug = _get_debug()
+    message = str(err)
+    hint = None
+    code = 3
+
+    if isinstance(err, ConfigMissingError):
+        code = 2
+        hint = "Create ~/.axl-uti/symbols.json (see symbols.example.json for format)"
+    elif isinstance(err, ConfigInvalidError):
+        code = 2
+        hint = "Check the JSON syntax in your symbols config file"
+    elif isinstance(err, SymbolNotFoundError):
+        code = 1
+        if err.available:
+            hint = f"Available: {err.available}"
+    elif isinstance(err, APIAuthError):
+        code = 3
+        hint = "Check your MS_API_KEY in .env"
+    elif isinstance(err, APIRateLimitError):
+        code = 3
+        hint = "Rate limit exceeded. Wait and try again"
+    elif isinstance(err, APIServerError):
+        code = 3
+        hint = "The Morningstar API is experiencing issues. Try again later"
+    elif isinstance(err, NetworkError):
+        code = 3
+        hint = "Network error. Check your internet connection"
+    elif isinstance(err, APIError):
+        code = 3
+
+    err_console.print(f"[bold red]Error:[/bold red] {message}")
+    if hint:
+        err_console.print(f"[dim]{hint}[/dim]")
+
+    if debug:
+        traceback.print_exc()
+
+    return code
+
+
+def getPerformanceIdBySymbol(symbol: str, byPass: bool):
+    if byPass:
+        return symbol
+    else:
+        return _resolve_symbol(symbol)
+
 
 @stocks_app.command(help="Find companies, ETFs inside and outside the United States")
 def search(text: str):
-    response = morning_star.autocomplete(text)
+    try:
+        response = morning_star.autocomplete(text)
+    except AxlError as e:
+        raise typer.Exit(code=_format_error(e))
 
     console.print(Tables.from_list(response, columns=[
         "Name",
@@ -26,22 +101,25 @@ def search(text: str):
         "Instrument",
     ]))
 
-def getPerformanceIdBySymbol(symbol: str, byPass: bool):
-    if byPass:
-        return symbol
-    else:
-        return _resolve_symbol(symbol)
 
 @stocks_app.command(help="Retrieve financial info of a symbol")
 def financials(symbol: str, pid: TypeOfPerformanceIdOption = False):
-    performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
+    try:
+        performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
+        data = morning_star.getFinancials(performanceId=performanceId)
+    except AxlError as e:
+        raise typer.Exit(code=_format_error(e))
 
-    print(morning_star.getFinancials(performanceId=performanceId))
+    print(data)
+
 
 @stocks_app.command(help="Show key stats of a symbol")
 def overview(symbol: str, pid: TypeOfPerformanceIdOption = False):
-    performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
-    response = morning_star.getOverview(performanceId)
+    try:
+        performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
+        response = morning_star.getOverview(performanceId)
+    except AxlError as e:
+        raise typer.Exit(code=_format_error(e))
 
     print("Valuation")
     console.print(Tables.from_dict(response['valuationRatio']))
@@ -72,14 +150,24 @@ def overview(symbol: str, pid: TypeOfPerformanceIdOption = False):
     table.add_row("Industry Avg.", *industryAvg)
     console.print(table)
 
+
 @stocks_app.command(name='price-vs-fair-value', help="Morningstar estimate based on how much cash they think the company will generate")
 def priceVsFairValue(symbol: str, pid: TypeOfPerformanceIdOption = False):
-    performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
-    print(morning_star.getPriceVsFairValue(performanceId))
+    try:
+        performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
+        data = morning_star.getPriceVsFairValue(performanceId)
+    except AxlError as e:
+        raise typer.Exit(code=_format_error(e))
+
+    print(data)
+
 
 @stocks_app.command(help="")
-def price(symbols: List[str]):    
-    response = morning_star.getInstrumentsPrice(symbols)
+def price(symbols: List[str]):
+    try:
+        response = morning_star.getInstrumentsPrice(symbols)
+    except AxlError as e:
+        raise typer.Exit(code=_format_error(e))
 
     for data in response:
         color = 'green' if data['dayChange'] >= 0 else 'red'
@@ -105,11 +193,15 @@ def price(symbols: List[str]):
         ("ExchangeId", "exchangeID"),
     ]))
 
+
 @stocks_app.command(name='avg-valuation')
 def avgValuation(symbol: str, pid: TypeOfPerformanceIdOption = False):
-    performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
-    response = morning_star.getAvgValuation(performanceId)
-    
+    try:
+        performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
+        response = morning_star.getAvgValuation(performanceId)
+    except AxlError as e:
+        raise typer.Exit(code=_format_error(e))
+
     headers: list = response['Collapsed']['columnDefs']
     del headers[0]
     headers.reverse()
@@ -131,10 +223,14 @@ def avgValuation(symbol: str, pid: TypeOfPerformanceIdOption = False):
         f'As of "{footer['asOfDate'][:-7]}", Index is: {footer['indexName']}. Currency: {footer['enterpriseValueCurrency']}'
     )
 
+
 @stocks_app.command(name='operating-efficiency')
 def operatingEfficiency(symbol: str, pid: TypeOfPerformanceIdOption = False):
-    performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
-    response = morning_star.getOperatingEfficency(performanceId)
+    try:
+        performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
+        response = morning_star.getOperatingEfficency(performanceId)
+    except AxlError as e:
+        raise typer.Exit(code=_format_error(e))
 
     data: list = response['dataList']
 
@@ -168,10 +264,14 @@ def operatingEfficiency(symbol: str, pid: TypeOfPerformanceIdOption = False):
         ("AssetsTurnover", "assetsTurnover", num_fmt),
     ]))
 
+
 @stocks_app.command()
 def comparator(symbols: List[str], pid: TypeOfPerformanceIdOption = False):
-    performanceIds = list(getPerformanceIdBySymbol(symbol, byPass=pid) for symbol in symbols)
-    
+    try:
+        performanceIds = list(getPerformanceIdBySymbol(symbol, byPass=pid) for symbol in symbols)
+    except AxlError as e:
+        raise typer.Exit(code=_format_error(e))
+
     comparation = SpreadSheetComparation()
     comparation.symbols = symbols
     comparation.performanceIds = performanceIds

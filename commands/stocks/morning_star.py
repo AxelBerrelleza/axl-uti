@@ -2,6 +2,14 @@ from enum import StrEnum
 from dotenv import load_dotenv
 from os import getenv
 import requests
+from requests.exceptions import HTTPError, ConnectionError, Timeout
+from commands.errors import (
+    APIError,
+    APIAuthError,
+    APIRateLimitError,
+    APIServerError,
+    NetworkError,
+)
 
 load_dotenv()
 
@@ -19,56 +27,76 @@ class Endpoints(StrEnum):
 session = requests.Session()
 session.headers = headers
 
-def autocomplete(search: str):
-    response = session.get(BASE_URL + '/market/v3/auto-complete', params ={ "q": search })
-    response.raise_for_status()
 
-    return response.json()
+def _api_request(endpoint: str, params: dict | None = None) -> dict:
+    try:
+        response = session.get(endpoint, params=params or {})
+        response.raise_for_status()
+        return response.json()
+    except HTTPError as e:
+        status = e.response.status_code
+        if status in (401, 403):
+            raise APIAuthError(status, endpoint)
+        elif status == 429:
+            raise APIRateLimitError(endpoint)
+        elif status >= 500:
+            raise APIServerError(status, endpoint)
+        else:
+            raise APIError(status, endpoint, str(e))
+    except (ConnectionError, Timeout) as e:
+        raise NetworkError(endpoint, e)
+    except KeyError as e:
+        raise APIError(0, endpoint, f"Missing expected field in response: {e}")
+
+
+def autocomplete(search: str):
+    return _api_request(
+        BASE_URL + '/market/v3/auto-complete',
+        params={"q": search},
+    )
+
 
 def getFinancials(performanceId: str):
-    response = session.get(BASE_URL + '/stock/v2/get-financials', params = {
-        "interval": "annual",
-        "reportType": "A",
-        "performanceId": performanceId,
-    })
-    response.raise_for_status()
+    return _api_request(
+        BASE_URL + '/stock/v2/get-financials',
+        params={
+            "interval": "annual",
+            "reportType": "A",
+            "performanceId": performanceId,
+        },
+    )
 
-    return response.json()
 
 def getOverview(performanceId: str):
-    response = session.get(Endpoints.OVERVIEW, params = {
-        "performanceId": performanceId,
-    })
-    response.raise_for_status()
+    return _api_request(
+        Endpoints.OVERVIEW,
+        params={"performanceId": performanceId},
+    )
 
-    return response.json()
 
 def getPriceVsFairValue(performanceId: str):
-    response = session.get(BASE_URL + '/stock/v2/get-price-fair-value/', params = { "performanceId": performanceId })
-    response.raise_for_status()
+    return _api_request(
+        BASE_URL + '/stock/v2/get-price-fair-value/',
+        params={"performanceId": performanceId},
+    )
 
-    return response.json()
 
 def getInstrumentsPrice(instruments: list):
-    response = session.get(Endpoints.INSTRUMENTS, params = {
-        "instrumentIds": '126.1.' + ',126.1.'.join(instruments)
-    })
-    response.raise_for_status()
+    return _api_request(
+        Endpoints.INSTRUMENTS,
+        params={"instrumentIds": '126.1.' + ',126.1.'.join(instruments)},
+    )
 
-    return response.json()
 
 def getAvgValuation(performanceId: str):
-    response = session.get(Endpoints.AVG_VALUATION, params = {
-        "performanceId": performanceId
-    })
-    response.raise_for_status()
+    return _api_request(
+        Endpoints.AVG_VALUATION,
+        params={"performanceId": performanceId},
+    )
 
-    return response.json()
 
 def getOperatingEfficency(performanceId: str):
-    response = session.get(BASE_URL + '/stock/v2/key-stats/get-operating-efficiency/', params = {
-        "performanceId": performanceId
-    })
-    response.raise_for_status()
-
-    return response.json()
+    return _api_request(
+        BASE_URL + '/stock/v2/key-stats/get-operating-efficiency/',
+        params={"performanceId": performanceId},
+    )

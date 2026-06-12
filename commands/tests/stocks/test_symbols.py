@@ -5,6 +5,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import commands.stocks.symbols as sym_module
+from commands.errors import ConfigMissingError, ConfigInvalidError
+from commands.stocks.errors import SymbolNotFoundError
 
 
 # ---------------------------------------------------------------------------
@@ -91,7 +93,7 @@ def test_find_config_falls_back_to_home(tmp_path, monkeypatch):
 
 def test_resolve_no_config_raises(tmp_path):
     with patch.object(sym_module, "_find_config", return_value=None):
-        with pytest.raises(FileNotFoundError) as exc_info:
+        with pytest.raises(ConfigMissingError) as exc_info:
             sym_module.resolve("MSFT")
 
     assert "symbols.json" in str(exc_info.value)
@@ -107,7 +109,7 @@ def test_resolve_unknown_ticker_raises_key_error(tmp_path):
     _write_json(config, SAMPLE_CONFIG)
 
     with patch.object(sym_module, "_find_config", return_value=config):
-        with pytest.raises(KeyError) as exc_info:
+        with pytest.raises(SymbolNotFoundError) as exc_info:
             sym_module.resolve("XYZ")
 
     error_msg = str(exc_info.value)
@@ -125,7 +127,7 @@ def test_resolve_invalid_json_raises(tmp_path):
     config.write_text("{ this is not valid json }", encoding="utf-8")
 
     with patch.object(sym_module, "_find_config", return_value=config):
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ConfigInvalidError) as exc_info:
             sym_module.resolve("MSFT")
 
     error_msg = str(exc_info.value)
