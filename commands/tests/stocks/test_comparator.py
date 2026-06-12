@@ -59,3 +59,29 @@ def test_command(requests_mock):
         assert cells[rowMap['PBV-5yr'] - initRow].value != None
 
         iter += 1
+
+
+def test_comparator_api_error_shows_phase_and_symbol(requests_mock):
+    requests_mock.get(Endpoints.OVERVIEW, json=APIResponses.MS.OVERVIEW)
+    requests_mock.get(Endpoints.INSTRUMENTS, status_code=500)
+    requests_mock.get(Endpoints.AVG_VALUATION, json=APIResponses.MS.AVG_VALUATION)
+
+    result = runner.invoke(stocks_app, ["comparator", "GOOGL", "AMZN"])
+
+    assert result.exit_code == 3
+    assert "Error:" in result.stdout
+    assert "Failed loading price" in result.stdout
+    assert "Traceback (most recent call last)" not in result.stdout
+
+
+def test_comparator_overview_error_shows_symbol(requests_mock):
+    requests_mock.get(Endpoints.OVERVIEW, status_code=500)
+    requests_mock.get(Endpoints.INSTRUMENTS, json=APIResponses.MS.instruments(2))
+    requests_mock.get(Endpoints.AVG_VALUATION, json=APIResponses.MS.AVG_VALUATION)
+
+    result = runner.invoke(stocks_app, ["comparator", "GOOGL", "AMZN"])
+
+    assert result.exit_code == 3
+    assert "Error:" in result.stdout
+    assert "Failed loading overview for 'GOOGL'" in result.stdout
+    assert "Traceback (most recent call last)" not in result.stdout

@@ -2,12 +2,10 @@ from .morning_star import *
 import logging
 from openpyxl import Workbook, load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
+from commands.errors import AxlError
+from commands.stocks.errors import ComparatorError
 
 logging.basicConfig(filename='debug.log', level=logging.DEBUG)
-# logging.basicConfig(level=logging.INFO, handlers={
-#     logging.FileHandler('debug.log'),
-#     logging.StreamHandler()
-# })
 logger = logging.getLogger(__name__)
 
 class SpreadSheetComparation:
@@ -49,15 +47,10 @@ class SpreadSheetComparation:
 
     def do(self):
         sheet: Worksheet = self.workbook.active
-        try:
-            self._loadSymbolsAsHeaders(sheet)
-            self._loadOverviewData(sheet)
-            self._loadInstrumentsPrice(sheet)
-            self._loadPastAvgValuation(sheet)
-
-        except Exception as ex:
-            logger.error(f"{ ex }")
-
+        self._loadSymbolsAsHeaders(sheet)
+        self._loadOverviewData(sheet)
+        self._loadInstrumentsPrice(sheet)
+        self._loadPastAvgValuation(sheet)
         self.workbook.save(filename=self.outputFilename)
         print("Finished")
 
@@ -68,7 +61,11 @@ class SpreadSheetComparation:
     
     def _loadOverviewData(self, sheet: Worksheet):
         for key, perId in enumerate(self.performanceIds):
-            response = getOverview(perId)
+            symbol = self.symbols[key]
+            try:
+                response = getOverview(perId)
+            except AxlError as e:
+                raise ComparatorError(phase="overview", symbol=symbol, original_error=e)
 
             sheet.cell(
                 row=self.rowMap['currentRatio'], 
@@ -110,7 +107,11 @@ class SpreadSheetComparation:
             ).value = response['valuationRatio']['priceToBook']
 
     def _loadInstrumentsPrice(self, sheet: Worksheet):
-        response = getInstrumentsPrice(self.symbols)        
+        try:
+            response = getInstrumentsPrice(self.symbols)
+        except AxlError as e:
+            raise ComparatorError(phase="price", original_error=e)
+
         for key, data in enumerate(response):
             sheet.cell(
                 row=self.rowMap['price'],
@@ -132,7 +133,12 @@ class SpreadSheetComparation:
                 return None
         
         for key, perId in enumerate(self.performanceIds):
-            response = getAvgValuation(perId)
+            symbol = self.symbols[key]
+            try:
+                response = getAvgValuation(perId)
+            except AxlError as e:
+                raise ComparatorError(phase="valuation", symbol=symbol, original_error=e)
+
             resp_rows = response['Collapsed']['rows']
 
             sheet.cell(

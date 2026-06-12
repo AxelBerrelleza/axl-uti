@@ -22,7 +22,7 @@ from commands.errors import (
     APIServerError,
     NetworkError,
 )
-from commands.stocks.errors import SymbolNotFoundError
+from commands.stocks.errors import SymbolNotFoundError, ComparatorError
 
 stocks_app = typer.Typer()
 console = Console()
@@ -37,36 +37,43 @@ def _get_debug() -> bool:
     return False
 
 
+def _get_hint(err: AxlError) -> str | None:
+    if isinstance(err, ComparatorError):
+        return _get_hint(err.original_error)
+    if isinstance(err, ConfigMissingError):
+        return "Create ~/.axl-uti/symbols.json (see symbols.example.json for format)"
+    if isinstance(err, ConfigInvalidError):
+        return "Check the JSON syntax in your symbols config file"
+    if isinstance(err, SymbolNotFoundError):
+        if err.available:
+            return f"Available: {err.available}"
+        return None
+    if isinstance(err, APIAuthError):
+        return "Check your MS_API_KEY in .env"
+    if isinstance(err, APIRateLimitError):
+        return "Rate limit exceeded. Wait and try again"
+    if isinstance(err, APIServerError):
+        return "The Morningstar API is experiencing issues. Try again later"
+    if isinstance(err, NetworkError):
+        return "Network error. Check your internet connection"
+    return None
+
+
+def _get_code(err: AxlError) -> int:
+    if isinstance(err, ComparatorError):
+        return _get_code(err.original_error)
+    if isinstance(err, SymbolNotFoundError):
+        return 1
+    if isinstance(err, (ConfigMissingError, ConfigInvalidError)):
+        return 2
+    return 3
+
+
 def _format_error(err: AxlError) -> int:
     debug = _get_debug()
     message = str(err)
-    hint = None
-    code = 3
-
-    if isinstance(err, ConfigMissingError):
-        code = 2
-        hint = "Create ~/.axl-uti/symbols.json (see symbols.example.json for format)"
-    elif isinstance(err, ConfigInvalidError):
-        code = 2
-        hint = "Check the JSON syntax in your symbols config file"
-    elif isinstance(err, SymbolNotFoundError):
-        code = 1
-        if err.available:
-            hint = f"Available: {err.available}"
-    elif isinstance(err, APIAuthError):
-        code = 3
-        hint = "Check your MS_API_KEY in .env"
-    elif isinstance(err, APIRateLimitError):
-        code = 3
-        hint = "Rate limit exceeded. Wait and try again"
-    elif isinstance(err, APIServerError):
-        code = 3
-        hint = "The Morningstar API is experiencing issues. Try again later"
-    elif isinstance(err, NetworkError):
-        code = 3
-        hint = "Network error. Check your internet connection"
-    elif isinstance(err, APIError):
-        code = 3
+    hint = _get_hint(err)
+    code = _get_code(err)
 
     err_console.print(f"[bold red]Error:[/bold red] {message}")
     if hint:
@@ -269,10 +276,9 @@ def operatingEfficiency(symbol: str, pid: TypeOfPerformanceIdOption = False):
 def comparator(symbols: List[str], pid: TypeOfPerformanceIdOption = False):
     try:
         performanceIds = list(getPerformanceIdBySymbol(symbol, byPass=pid) for symbol in symbols)
+        comparation = SpreadSheetComparation()
+        comparation.symbols = symbols
+        comparation.performanceIds = performanceIds
+        comparation.do()
     except AxlError as e:
         raise typer.Exit(code=_format_error(e))
-
-    comparation = SpreadSheetComparation()
-    comparation.symbols = symbols
-    comparation.performanceIds = performanceIds
-    comparation.do()

@@ -16,3 +16,15 @@ class SymbolResolveError(AxlError):
         self.ticker = ticker
         self.reason = reason
         super().__init__(f"Cannot resolve '{ticker}': {reason}")
+
+
+class ComparatorError(AxlError):
+    def __init__(self, phase: str, original_error: Exception, symbol: str | None = None):
+        self.symbol = symbol
+        self.phase = phase
+        self.original_error = original_error
+        if symbol:
+            msg = f"Failed loading {phase} for '{symbol}': {original_error}"
+        else:
+            msg = f"Failed loading {phase}: {original_error}"
+        super().__init__(msg)
