@@ -155,3 +155,44 @@ class MS:
             ]
         }
     }
+
+    COMPETITORS = {
+        "main": {
+            "ticker": "TSLA",
+            "name": "Tesla Inc",
+            "lastCloseDB": 399.15,
+            "lastCloseCurrencyDB": "USD",
+            "priceEarnings": 325.652367,
+            "operatingMargin": 5.41,
+            "revenueGrowth": 15.78,
+            "analyst": "Seth Goldstein, Senior Equity Analyst",
+            "performanceId": "0P0000OQN8",
+        },
+        "competitors": [
+            {
+                "ticker": "002594",
+                "name": "BYD Co Ltd Class A",
+                "lastCloseDB": 89.8,
+                "lastCloseCurrencyDB": "CNY",
+                "priceEarnings": 41.193390,
+                "priceSale": 1.077147,
+                "operatingMargin": 4.7,
+                "revenueGrowth": -11.82,
+                "analyst": "Vincent Sun, Senior Equity Analyst",
+                "performanceId": "0P0000TLIB",
+            },
+            {
+                "ticker": "RIVN",
+                "name": "Rivian Automotive Inc Class A",
+                "lastCloseDB": 15.54,
+                "lastCloseCurrencyDB": "USD",
+                "priceEarnings": None,
+                "priceSale": 3.454454,
+                "operatingMargin": -68.94,
+                "revenueGrowth": 11.37,
+                "analyst": "Seth Goldstein, Senior Equity Analyst",
+                "performanceId": "0P0001NP95",
+            },
+        ],
+        "quantCompetitors": [],
+    }

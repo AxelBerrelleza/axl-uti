@@ -272,6 +272,41 @@ def operatingEfficiency(symbol: str, pid: TypeOfPerformanceIdOption = False):
     ]))
 
 
+@stocks_app.command(help="Show competitors of a symbol")
+def competitors(symbol: str, pid: TypeOfPerformanceIdOption = False):
+    try:
+        performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
+        response = morning_star.getCompetitors(performanceId)
+    except AxlError as e:
+        raise typer.Exit(code=_format_error(e))
+
+    comps = response.get("competitors", [])
+    if not comps:
+        print(f"No competitors found for {symbol}")
+        return
+
+    for c in comps:
+        c['_ticker'] = c['ticker']
+        c['_name'] = c['name']
+        c['_price'] = f'{float(c["lastCloseDB"]):.2f}' if c["lastCloseDB"] is not None else '—'
+        c['_currency'] = c.get('lastCloseCurrencyDB', 'N/A')
+        c['_pe'] = f'{float(c["priceEarnings"]):.2f}' if c["priceEarnings"] is not None else '—'
+        c['_opMargin'] = f'{float(c["operatingMargin"]):.2f}%' if c["operatingMargin"] is not None else '—'
+        c['_revGrowth'] = f'{float(c["revenueGrowth"]):.2f}%' if c["revenueGrowth"] is not None else '—'
+        c['_priceSale'] = f'{float(c["priceSale"]):.2f}' if c["priceSale"] is not None else '—'
+
+    console.print(Tables.from_list(comps, columns=[
+        ('Ticker', '_ticker'),
+        ('Name', '_name'),
+        ('Price', '_price'),
+        ('Currency', '_currency'),
+        ('P/E', '_pe'),
+        ('Price/Sales', '_priceSale'),
+        ('Op. Margin', '_opMargin'),
+        ('Rev. Growth', '_revGrowth'),
+    ]))
+
+
 @stocks_app.command()
 def comparator(symbols: List[str], pid: TypeOfPerformanceIdOption = False):
     try:

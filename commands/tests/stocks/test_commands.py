@@ -211,3 +211,49 @@ class TestErrorHandling:
         assert result.exit_code == 3
         assert "Error:" in result.stdout
         assert "Traceback (most recent call last)" in result.stdout
+
+
+def test_competitors(requests_mock):
+    requests_mock.get(
+        Endpoints.COMPETITORS,
+        json=APIResponses.MS.COMPETITORS,
+    )
+    result = runner.invoke(stocks_app, ["competitors", "AAPL"], env={"COLUMNS": "200"})
+    assert result.exit_code == 0
+
+    headers = ("Ticker", "Name", "Price", "Currency", "P/E", "Price/Sales", "Op. Margin", "Rev. Growth")
+    for header in headers:
+        assert header in result.stdout, f"Missing header: {header}"
+
+    assert "002594" in result.stdout
+    assert "BYD Co Ltd Class A" in result.stdout
+    assert "89.80" in result.stdout
+    assert "CNY" in result.stdout
+    assert "41.19" in result.stdout
+    assert "4.70%" in result.stdout
+    assert "-11.82%" in result.stdout
+    assert "1.08" in result.stdout
+
+    assert "RIVN" in result.stdout
+    assert "Rivian Automotive Inc Class A" in result.stdout
+    assert "15.54" in result.stdout
+    assert "USD" in result.stdout
+    assert "—" in result.stdout
+    assert "-68.94%" in result.stdout
+    assert "11.37%" in result.stdout
+    assert "3.45" in result.stdout
+
+
+def test_competitors_empty(requests_mock):
+    empty_response = {
+        "main": APIResponses.MS.COMPETITORS["main"],
+        "competitors": [],
+        "quantCompetitors": [],
+    }
+    requests_mock.get(
+        Endpoints.COMPETITORS,
+        json=empty_response,
+    )
+    result = runner.invoke(stocks_app, ["competitors", "AAPL"], env={"COLUMNS": "200"})
+    assert result.exit_code == 0
+    assert "No competitors found for AAPL" in result.stdout
