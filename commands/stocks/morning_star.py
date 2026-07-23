@@ -24,6 +24,7 @@ class Endpoints(StrEnum):
     INSTRUMENTS = BASE_URL + __stocks + '/get-instruments/'
     AVG_VALUATION = BASE_URL + __stocks + '/get-valuation/'
     COMPETITORS = BASE_URL + __stocks + '/get-competitors'
+    FINANCIAL_HEALTH = BASE_URL + __stocks + '/key-stats/get-financial-health'
 
 session = requests.Session()
 session.headers = headers
@@ -106,5 +107,12 @@ def getOperatingEfficency(performanceId: str):
 def getCompetitors(performanceId: str):
     return _api_request(
         Endpoints.COMPETITORS,
+        params={"performanceId": performanceId},
+    )
+
+
+def getFinancialHealth(performanceId: str):
+    return _api_request(
+        Endpoints.FINANCIAL_HEALTH,
         params={"performanceId": performanceId},
     )

@@ -1,6 +1,7 @@
 import pytest
 from typer.testing import CliRunner
 from logging import getLogger
+from unittest.mock import patch
 from commands.stocks import stocks_app, Endpoints
 from commands.tests.fixtures import APIResponses
 from commands.stocks.SpreedSheetComparation import SpreadSheetComparation
@@ -85,3 +86,53 @@ def test_comparator_overview_error_shows_symbol(requests_mock):
     assert "Error:" in result.stdout
     assert "Failed loading overview for 'GOOGL'" in result.stdout
     assert "Traceback (most recent call last)" not in result.stdout
+
+
+def test_command_with_fallback_adapter(requests_mock):
+    symbols = ['GOOGL', 'AMZN']
+    oe_url = "https://morning-star.p.rapidapi.com/stock/v2/key-stats/get-operating-efficiency/"
+
+    requests_mock.get(Endpoints.FINANCIAL_HEALTH, json=APIResponses.MS.FINANCIAL_HEALTH)
+    requests_mock.get(oe_url, json=APIResponses.MS.OPERATING_EFFICIENCY)
+    requests_mock.get(Endpoints.AVG_VALUATION, json=APIResponses.MS.AVG_VALUATION)
+    requests_mock.get(Endpoints.INSTRUMENTS, json=APIResponses.MS.instruments(len(symbols)))
+
+    with patch('commands.stocks.SpreedSheetComparation.USE_FALLBACK_ADAPTER', True):
+        result = runner.invoke(stocks_app, ['comparator', *symbols])
+
+    logger.debug(result.stdout)
+    assert 'Loading' in result.stdout
+    assert 'Finished' in result.stdout
+
+    xlDoc = load_workbook(filename='comparation.xlsx', data_only=True)
+    sheet: Worksheet = xlDoc.active
+    initColumn = SpreadSheetComparation.initialColumn
+    initRow = SpreadSheetComparation.initialRow
+    rowMap = SpreadSheetComparation.rowMap
+
+    iter = 0
+    for cells in sheet.iter_cols(
+        min_col=initColumn,
+        max_col=len(symbols) + initColumn - 1,
+        min_row=initRow,
+        max_row=40
+    ):
+        assert cells[0].value == symbols[iter]
+
+        assert cells[rowMap['currentRatio'] - initRow].value == 2.0431
+        assert cells[rowMap['quickRatio'] - initRow].value == 1.4266
+        assert cells[rowMap['debtToEquity'] - initRow].value == 0.16
+        assert cells[rowMap['roe'] - initRow].value == 30.5
+        assert cells[rowMap['netMargin'] - initRow].value == 25.1
+        assert cells[rowMap['PER'] - initRow].value is not None
+        assert cells[rowMap['PCF'] - initRow].value is not None
+        assert cells[rowMap['PS'] - initRow].value is not None
+        assert cells[rowMap['PBV'] - initRow].value is not None
+
+        assert cells[rowMap['price'] - initRow].value is not None
+        assert cells[rowMap['PER-5yr'] - initRow].value is not None
+        assert cells[rowMap['PCF-5yr'] - initRow].value is not None
+        assert cells[rowMap['PS-5yr'] - initRow].value is not None
+        assert cells[rowMap['PBV-5yr'] - initRow].value is not None
+
+        iter += 1
