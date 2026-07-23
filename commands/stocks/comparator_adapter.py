@@ -82,18 +82,17 @@ class FallbackAdapter(ComparatorDataAdapter):
         PCF_INDEX = 2
         PBV_INDEX = 3
 
-        def _latest_non_null(index):
+        def _current_value(index):
             datum = rows[index]['datum']
-            for val in reversed(datum):
-                try:
-                    return float(val)
-                except (ValueError, TypeError):
-                    continue
-            return None
+            current_idx = len(datum) - 3
+            try:
+                return float(datum[current_idx])
+            except (ValueError, TypeError, IndexError):
+                return None
 
         return {
-            'ps': _latest_non_null(PS_INDEX),
-            'per': _latest_non_null(PER_INDEX),
-            'pcf': _latest_non_null(PCF_INDEX),
-            'pbv': _latest_non_null(PBV_INDEX),
+            'ps': _current_value(PS_INDEX),
+            'per': _current_value(PER_INDEX),
+            'pcf': _current_value(PCF_INDEX),
+            'pbv': _current_value(PBV_INDEX),
         }

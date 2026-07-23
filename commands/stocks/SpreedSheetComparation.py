@@ -12,7 +12,7 @@ from .morning_star import *
 logging.basicConfig(filename="debug.log", level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-USE_FALLBACK_ADAPTER = True
+USE_FALLBACK_ADAPTER = False
 
 
 class SpreadSheetComparation:
