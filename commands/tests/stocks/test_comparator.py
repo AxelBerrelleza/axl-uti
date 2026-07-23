@@ -136,3 +136,33 @@ def test_command_with_fallback_adapter(requests_mock):
         assert cells[rowMap['PBV-5yr'] - initRow].value is not None
 
         iter += 1
+
+
+def test_fallback_adapter_notice_printed(requests_mock):
+    symbols = ['GOOGL']
+    oe_url = "https://morning-star.p.rapidapi.com/stock/v2/key-stats/get-operating-efficiency/"
+
+    requests_mock.get(Endpoints.FINANCIAL_HEALTH, json=APIResponses.MS.FINANCIAL_HEALTH)
+    requests_mock.get(oe_url, json=APIResponses.MS.OPERATING_EFFICIENCY)
+    requests_mock.get(Endpoints.AVG_VALUATION, json=APIResponses.MS.AVG_VALUATION)
+    requests_mock.get(Endpoints.INSTRUMENTS, json=APIResponses.MS.instruments(len(symbols)))
+
+    with patch('commands.stocks.SpreedSheetComparation.USE_FALLBACK_ADAPTER', True):
+        result = runner.invoke(stocks_app, ['comparator', *symbols])
+
+    assert result.exit_code == 0
+    assert 'Using adapter: FallbackAdapter' in result.stdout
+
+
+def test_overview_adapter_notice_printed(requests_mock):
+    symbols = ['GOOGL']
+
+    requests_mock.get(Endpoints.OVERVIEW, json=APIResponses.MS.OVERVIEW)
+    requests_mock.get(Endpoints.INSTRUMENTS, json=APIResponses.MS.instruments(len(symbols)))
+    requests_mock.get(Endpoints.AVG_VALUATION, json=APIResponses.MS.AVG_VALUATION)
+
+    with patch('commands.stocks.SpreedSheetComparation.USE_FALLBACK_ADAPTER', False):
+        result = runner.invoke(stocks_app, ['comparator', *symbols])
+
+    assert result.exit_code == 0
+    assert 'Using adapter: OverviewAdapter' in result.stdout

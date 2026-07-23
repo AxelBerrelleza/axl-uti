@@ -54,6 +54,8 @@ class SpreadSheetComparation:
 
     def do(self):
         sheet: Worksheet = self.workbook.active
+        adapter_name = "FallbackAdapter" if USE_FALLBACK_ADAPTER else "OverviewAdapter"
+        print(f"Using adapter: {adapter_name}")
         self._loadSymbolsAsHeaders(sheet)
         self._loadOverviewData(sheet)
         self._loadInstrumentsPrice(sheet)
