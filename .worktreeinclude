@@ -1,0 +1,4 @@
+# Gitignored files copied (not symlinked) from the primary checkout into each
+# new Orca worktree. Literal paths only — no globs.
+.env
+symbols.json

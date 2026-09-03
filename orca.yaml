@@ -1,0 +1,12 @@
+# Orca worktree configuration.
+# `setup` runs automatically after each new worktree is created (repo hook
+# policy is "run-by-default"). It gives every worktree its own isolated
+# Python environment (Option A: fresh venv per worktree).
+#
+# Gitignored essentials (.env, symbols.json) are copied into new worktrees
+# via .worktreeinclude — see that file.
+scripts:
+  setup: |
+    python -m venv .venv
+    .venv/bin/pip install --quiet --upgrade pip
+    .venv/bin/pip install --quiet -r requirements/dev.txt
