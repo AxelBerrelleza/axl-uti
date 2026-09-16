@@ -7,7 +7,7 @@ from commands.errors import AxlError
 from commands.stocks.comparator_adapter import FallbackAdapter, OverviewAdapter
 from commands.stocks.errors import ComparatorError
 
-from .morning_star import *
+from .morning_star import getAvgValuation, getInstrumentsPrice
 
 logging.basicConfig(filename="debug.log", level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ class SpreadSheetComparation:
     """
 
     path: str = "assets/base-sheet.xlsx"
-    workbook: Workbook = None
+    workbook: Workbook | None = None
     performanceIds: list
     symbols: list
     outputFilename: str = "comparation.xlsx"
@@ -46,6 +46,7 @@ class SpreadSheetComparation:
         "PCF-5yr": 29,
         "PS-5yr": 32,
         "PBV-5yr": 35,
+        "valuationDate": 49,
     }
 
     def __init__(self):
@@ -53,7 +54,8 @@ class SpreadSheetComparation:
         self.workbook = load_workbook(filename=self.path)
 
     def do(self):
-        sheet: Worksheet = self.workbook.active
+        assert self.workbook is not None
+        sheet: Worksheet = self.workbook.active  # type: ignore[assignment]
         adapter_name = "FallbackAdapter" if USE_FALLBACK_ADAPTER else "OverviewAdapter"
         print(f"Using adapter: {adapter_name}")
         self._loadSymbolsAsHeaders(sheet)
@@ -88,25 +90,15 @@ class SpreadSheetComparation:
                 row=self.rowMap["debtToEquity"], column=self.initialColumn + key
             ).value = data.debtToEquity
 
-            sheet.cell(
-                row=self.rowMap["roe"], column=self.initialColumn + key
-            ).value = data.roe
+            sheet.cell(row=self.rowMap["roe"], column=self.initialColumn + key).value = data.roe
             sheet.cell(
                 row=self.rowMap["netMargin"], column=self.initialColumn + key
             ).value = data.netMargin
 
-            sheet.cell(
-                row=self.rowMap["PER"], column=self.initialColumn + key
-            ).value = data.per
-            sheet.cell(
-                row=self.rowMap["PCF"], column=self.initialColumn + key
-            ).value = data.pcf
-            sheet.cell(
-                row=self.rowMap["PS"], column=self.initialColumn + key
-            ).value = data.ps
-            sheet.cell(
-                row=self.rowMap["PBV"], column=self.initialColumn + key
-            ).value = data.pbv
+            sheet.cell(row=self.rowMap["PER"], column=self.initialColumn + key).value = data.per
+            sheet.cell(row=self.rowMap["PCF"], column=self.initialColumn + key).value = data.pcf
+            sheet.cell(row=self.rowMap["PS"], column=self.initialColumn + key).value = data.ps
+            sheet.cell(row=self.rowMap["PBV"], column=self.initialColumn + key).value = data.pbv
 
     def _loadInstrumentsPrice(self, sheet: Worksheet):
         try:
@@ -115,9 +107,9 @@ class SpreadSheetComparation:
             raise ComparatorError(phase="price", original_error=e)
 
         for key, data in enumerate(response):
-            sheet.cell(
-                row=self.rowMap["price"], column=self.initialColumn + key
-            ).value = data["lastPrice"]
+            sheet.cell(row=self.rowMap["price"], column=self.initialColumn + key).value = data[
+                "lastPrice"
+            ]
 
     def _loadPastAvgValuation(self, sheet: Worksheet):
         PS_index = 0
@@ -134,14 +126,21 @@ class SpreadSheetComparation:
             except (ValueError, TypeError):
                 return None
 
+        def extractAsOfDate(response):
+            try:
+                as_of_date = response["Collapsed"]["footer"]["asOfDate"]
+                if as_of_date:
+                    return as_of_date[:10]
+            except (KeyError, TypeError, AttributeError):
+                pass
+            return None
+
         for key, perId in enumerate(self.performanceIds):
             symbol = self.symbols[key]
             try:
                 response = getAvgValuation(perId)
             except AxlError as e:
-                raise ComparatorError(
-                    phase="valuation", symbol=symbol, original_error=e
-                )
+                raise ComparatorError(phase="valuation", symbol=symbol, original_error=e)
 
             resp_rows = response["Collapsed"]["rows"]
 
@@ -157,3 +156,8 @@ class SpreadSheetComparation:
             sheet.cell(
                 row=self.rowMap["PBV-5yr"], column=self.initialColumn + key
             ).value = getFiveYearValue(PBV_index, resp_rows)
+
+            valuation_date = extractAsOfDate(response)
+            sheet.cell(
+                row=self.rowMap["valuationDate"], column=self.initialColumn + key
+            ).value = valuation_date

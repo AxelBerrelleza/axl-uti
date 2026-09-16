@@ -1,13 +1,15 @@
-from typing import Any, Callable, Dict, List, Tuple, Union
+from collections.abc import Callable
+from typing import Any
+
 from rich.table import Table
 
-ColumnSpec = Union[str, Tuple[str, str], Tuple[str, str, Callable[[Any], str] | None]]
+ColumnSpec = str | tuple[str, str] | tuple[str, str, Callable[[Any], str] | None]
 
 
 class Tables:
     @staticmethod
     def from_dict(
-        data: Dict[str, Any],
+        data: dict[str, Any],
         *,
         value_formatter: Callable[[Any], str] | None = str,
     ) -> Table:
@@ -21,12 +23,12 @@ class Tables:
 
     @staticmethod
     def from_list(
-        data: List[Dict[str, Any]],
-        columns: List[ColumnSpec],
+        data: list[dict[str, Any]],
+        columns: list[ColumnSpec],
     ) -> Table:
-        headers: List[str] = []
-        key_mappings: List[str] = []
-        formatters: List[Callable[[Any], str] | None] = []
+        headers: list[str] = []
+        key_mappings: list[str] = []
+        formatters: list[Callable[[Any], str] | None] = []
 
         for col in columns:
             if isinstance(col, str):
@@ -45,7 +47,7 @@ class Tables:
         table = Table(*headers)
         for row in data:
             cells = []
-            for key, fmt in zip(key_mappings, formatters):
+            for key, fmt in zip(key_mappings, formatters, strict=False):
                 val = row.get(key)
                 if val is not None and fmt is not None:
                     cells.append(fmt(val))

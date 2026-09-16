@@ -13,6 +13,9 @@ Adapter interface: expose NAME and `collect(ticker, performance_id)` returning
 Normalization happens here; downstream stages only see the data.json contract
 (stockstory/schema.md).
 """
+
+from typing import Any
+
 from commands.stocks import morning_star as ms
 
 NAME = "repo-morningstar"
@@ -23,7 +26,8 @@ _DATE_KEYS = {"fiscalPeriodYearMonth", "fiscalPeriodYear", "morningstarEndingDat
 
 def _datalist_to_series(data: dict) -> dict:
     rows = data.get("dataList", [])
-    periods, series = [], {}
+    periods: list[str] = []
+    series: dict[str, list[Any]] = {}
     for row in rows:
         period = str(row.get("fiscalPeriodYearMonth") or row.get("fiscalPeriodYear"))
         periods.append(period)
@@ -35,9 +39,11 @@ def _datalist_to_series(data: dict) -> dict:
 
 
 def _statements(raw: dict) -> dict:
-    mapping = {"incomeStatement": "income_statement",
-               "balanceSheet": "balance_sheet",
-               "cashFlow": "cash_flow"}
+    mapping = {
+        "incomeStatement": "income_statement",
+        "balanceSheet": "balance_sheet",
+        "cashFlow": "cash_flow",
+    }
     out = {}
     for src, dst in mapping.items():
         stmt = raw.get(src)
@@ -56,14 +62,19 @@ def _price_vs_fair_value(raw: dict) -> dict:
     monthly = []
     for year in chart.get("yearly", []):
         for m in year.get("monthly", []):
-            monthly.append({
-                "date": m.get("fairValueMonthlyDate"),
-                "close": float(m["close"]) if m.get("close") not in (None, "_PO_") else None,
-                "price_to_fair_value": (float(m["priceFairValue"])
-                                        if m.get("priceFairValue") not in (None, "_PO_") else None),
-            })
+            monthly.append(
+                {
+                    "date": m.get("fairValueMonthlyDate"),
+                    "close": float(m["close"]) if m.get("close") not in (None, "_PO_") else None,
+                    "price_to_fair_value": (
+                        float(m["priceFairValue"])
+                        if m.get("priceFairValue") not in (None, "_PO_")
+                        else None
+                    ),
+                }
+            )
     recent = chart.get("recent") or {}
-    out = {"monthly": monthly}
+    out: dict[str, Any] = {"monthly": monthly}
     if recent.get("latestClose") not in (None, "_PO_"):
         out["latest_close"] = float(recent["latestClose"])
     if recent.get("latestFairValue") not in (None, "_PO_"):
@@ -75,27 +86,30 @@ def _avg_valuation(raw: dict) -> dict:
     def view(key):
         v = raw.get(key) or {}
         return {r["label"]: r.get("datum") for r in v.get("rows", [])}
+
     exp = raw.get("Expanded") or {}
     return {
         "columns": exp.get("columnDefs", []),
-        "series": view("Expanded"),          # PEG, EV/EBIT, yields, ...
-        "core_series": view("Collapsed"),    # P/S, P/E, P/CF, P/B
+        "series": view("Expanded"),  # PEG, EV/EBIT, yields, ...
+        "core_series": view("Collapsed"),  # P/S, P/E, P/CF, P/B
     }
 
 
 def _competitors(raw: dict) -> list:
     out = []
     for c in raw.get("competitors", []):
-        out.append({
-            "ticker": c.get("ticker"),
-            "name": c.get("name"),
-            "price": c.get("lastCloseDB"),
-            "currency": c.get("lastCloseCurrencyDB"),
-            "pe": c.get("priceEarnings"),
-            "price_to_sales": c.get("priceSale"),
-            "operating_margin_pct": c.get("operatingMargin"),
-            "revenue_growth_pct": c.get("revenueGrowth"),
-        })
+        out.append(
+            {
+                "ticker": c.get("ticker"),
+                "name": c.get("name"),
+                "price": c.get("lastCloseDB"),
+                "currency": c.get("lastCloseCurrencyDB"),
+                "pe": c.get("priceEarnings"),
+                "price_to_sales": c.get("priceSale"),
+                "operating_margin_pct": c.get("operatingMargin"),
+                "revenue_growth_pct": c.get("revenueGrowth"),
+            }
+        )
     return out
 
 
@@ -120,7 +134,7 @@ def collect(ticker: str, performance_id: str) -> dict:
     def grab(key, fn, normalize=lambda x: x):
         try:
             sections[key] = normalize(fn(performance_id))
-        except Exception as e:  # noqa: BLE001 — coverage report over crash
+        except Exception as e:
             missing.append({"field": key, "reason": f"{type(e).__name__}: {e}"})
 
     grab("statements", ms.getFinancials, _statements)
@@ -132,20 +146,33 @@ def collect(ticker: str, performance_id: str) -> dict:
 
     try:
         sections["price"] = _spot_price(ms.getInstrumentsPrice([ticker]))
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         missing.append({"field": "price", "reason": f"{type(e).__name__}: {e}"})
 
-    missing.append({"field": "analyst_estimates",
-                    "reason": "excluded by design; user must provide material"})
-    missing.append({"field": "company_profile",
-                    "reason": "overview endpoint unavailable (503); use user material"})
+    missing.append(
+        {"field": "analyst_estimates", "reason": "excluded by design; user must provide material"}
+    )
+    missing.append(
+        {
+            "field": "company_profile",
+            "reason": "overview endpoint unavailable (503); use user material",
+        }
+    )
 
     is_rows = sections.get("statements", {}).get("income_statement", {}).get("rows", {})
-    has_segments = any(any(k in label.lower() for k in
-                           ("segment", "division", "north america", "international", " aws"))
-                       for label in is_rows)
+    has_segments = any(
+        any(
+            k in label.lower()
+            for k in ("segment", "division", "north america", "international", " aws")
+        )
+        for label in is_rows
+    )
     if not has_segments:
-        missing.append({"field": "segment_breakdown",
-                        "reason": "statements are aggregate-only; Revenue break down "
-                                  "needs user material or open questions"})
+        missing.append(
+            {
+                "field": "segment_breakdown",
+                "reason": "statements are aggregate-only; Revenue break down "
+                "needs user material or open questions",
+            }
+        )
     return {"sections": sections, "missing": missing}

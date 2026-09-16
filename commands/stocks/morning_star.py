@@ -1,11 +1,13 @@
 from enum import StrEnum
-from dotenv import load_dotenv
 from os import getenv
+
 import requests
-from requests.exceptions import HTTPError, ConnectionError, Timeout
+from dotenv import load_dotenv
+from requests.exceptions import ConnectionError, HTTPError, Timeout
+
 from commands.errors import (
-    APIError,
     APIAuthError,
+    APIError,
     APIRateLimitError,
     APIServerError,
     NetworkError,
@@ -18,16 +20,24 @@ headers = {
     "x-rapidapi-host": "morning-star.p.rapidapi.com",
     "x-rapidapi-key": getenv("MS_API_KEY"),
 }
+
+
 class Endpoints(StrEnum):
-    __stocks: str = '/stock/v2'
-    OVERVIEW = BASE_URL + __stocks + '/key-stats/get-overview/'
-    INSTRUMENTS = BASE_URL + __stocks + '/get-instruments/'
-    AVG_VALUATION = BASE_URL + __stocks + '/get-valuation/'
-    COMPETITORS = BASE_URL + __stocks + '/get-competitors'
-    FINANCIAL_HEALTH = BASE_URL + __stocks + '/key-stats/get-financial-health'
+    __stocks: str = "/stock/v2"
+    OVERVIEW = BASE_URL + __stocks + "/key-stats/get-overview/"
+    INSTRUMENTS = BASE_URL + __stocks + "/get-instruments/"
+    AVG_VALUATION = BASE_URL + __stocks + "/get-valuation/"
+    COMPETITORS = BASE_URL + __stocks + "/get-competitors"
+    FINANCIAL_HEALTH = BASE_URL + __stocks + "/key-stats/get-financial-health"
+
 
 session = requests.Session()
-session.headers = headers
+session.headers.update(
+    {
+        "x-rapidapi-host": "morning-star.p.rapidapi.com",
+        "x-rapidapi-key": getenv("MS_API_KEY") or "",
+    }
+)
 
 
 def _api_request(endpoint: str, params: dict | None = None) -> dict:
@@ -53,14 +63,14 @@ def _api_request(endpoint: str, params: dict | None = None) -> dict:
 
 def autocomplete(search: str):
     return _api_request(
-        BASE_URL + '/market/v3/auto-complete',
+        BASE_URL + "/market/v3/auto-complete",
         params={"q": search},
     )
 
 
 def getFinancials(performanceId: str):
     return _api_request(
-        BASE_URL + '/stock/v2/get-financials',
+        BASE_URL + "/stock/v2/get-financials",
         params={
             "interval": "annual",
             "reportType": "A",
@@ -78,7 +88,7 @@ def getOverview(performanceId: str):
 
 def getPriceVsFairValue(performanceId: str):
     return _api_request(
-        BASE_URL + '/stock/v2/get-price-fair-value/',
+        BASE_URL + "/stock/v2/get-price-fair-value/",
         params={"performanceId": performanceId},
     )
 
@@ -86,7 +96,7 @@ def getPriceVsFairValue(performanceId: str):
 def getInstrumentsPrice(instruments: list):
     return _api_request(
         Endpoints.INSTRUMENTS,
-        params={"instrumentIds": '126.1.' + ',126.1.'.join(instruments)},
+        params={"instrumentIds": "126.1." + ",126.1.".join(instruments)},
     )
 
 
@@ -99,7 +109,7 @@ def getAvgValuation(performanceId: str):
 
 def getOperatingEfficency(performanceId: str):
     return _api_request(
-        BASE_URL + '/stock/v2/key-stats/get-operating-efficiency/',
+        BASE_URL + "/stock/v2/key-stats/get-operating-efficiency/",
         params={"performanceId": performanceId},
     )
 

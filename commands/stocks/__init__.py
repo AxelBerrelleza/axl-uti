@@ -1,33 +1,35 @@
 import traceback
+from typing import Annotated
 
 import click
 import typer
+from rich import print
 from rich.console import Console
 from rich.table import Table
-from rich import print
-from typing_extensions import Annotated
-from typing import Optional, List
 
-from .morning_star import *
-from .symbols import resolve as _resolve_symbol
-from .SpreedSheetComparation import SpreadSheetComparation
-from commands.utils.tables import Tables
 from commands.errors import (
-    AxlError,
-    ConfigMissingError,
-    ConfigInvalidError,
-    APIError,
     APIAuthError,
     APIRateLimitError,
     APIServerError,
+    AxlError,
+    ConfigInvalidError,
+    ConfigMissingError,
     NetworkError,
 )
-from commands.stocks.errors import SymbolNotFoundError, ComparatorError
+from commands.stocks.errors import ComparatorError, SymbolNotFoundError
+from commands.utils.tables import Tables
+
+from . import morning_star
+from .morning_star import Endpoints as Endpoints
+from .SpreedSheetComparation import SpreadSheetComparation
+from .symbols import resolve as _resolve_symbol
 
 stocks_app = typer.Typer()
 console = Console()
 err_console = Console(stderr=True)
-TypeOfPerformanceIdOption = Annotated[Optional[bool], typer.Option(help="Do the request with PerformanceId instead of symbol")]
+TypeOfPerformanceIdOption = Annotated[
+    bool | None, typer.Option(help="Do the request with PerformanceId instead of symbol")
+]
 
 
 def _get_debug() -> bool:
@@ -38,7 +40,7 @@ def _get_debug() -> bool:
 
 
 def _get_hint(err: AxlError) -> str | None:
-    if isinstance(err, ComparatorError):
+    if isinstance(err, ComparatorError) and isinstance(err.original_error, AxlError):
         return _get_hint(err.original_error)
     if isinstance(err, ConfigMissingError):
         return "Create ~/.axl-uti/symbols.json (see symbols.example.json for format)"
@@ -60,7 +62,7 @@ def _get_hint(err: AxlError) -> str | None:
 
 
 def _get_code(err: AxlError) -> int:
-    if isinstance(err, ComparatorError):
+    if isinstance(err, ComparatorError) and isinstance(err.original_error, AxlError):
         return _get_code(err.original_error)
     if isinstance(err, SymbolNotFoundError):
         return 1
@@ -85,7 +87,7 @@ def _format_error(err: AxlError) -> int:
     return code
 
 
-def getPerformanceIdBySymbol(symbol: str, byPass: bool):
+def getPerformanceIdBySymbol(symbol: str, byPass: bool | None = False) -> str:
     if byPass:
         return symbol
     else:
@@ -99,14 +101,19 @@ def search(text: str):
     except AxlError as e:
         raise typer.Exit(code=_format_error(e))
 
-    console.print(Tables.from_list(response, columns=[
-        "Name",
-        ("Region & symbol", "RegionAndTicker"),
-        ("Type", "TypeName"),
-        ("Exchange", "ExchangeShortName"),
-        "PerformanceId",
-        "Instrument",
-    ]))
+    console.print(
+        Tables.from_list(
+            response,
+            columns=[
+                "Name",
+                ("Region & symbol", "RegionAndTicker"),
+                ("Type", "TypeName"),
+                ("Exchange", "ExchangeShortName"),
+                "PerformanceId",
+                "Instrument",
+            ],
+        )
+    )
 
 
 @stocks_app.command(help="Retrieve financial info of a symbol")
@@ -129,36 +136,39 @@ def overview(symbol: str, pid: TypeOfPerformanceIdOption = False):
         raise typer.Exit(code=_format_error(e))
 
     print("Valuation")
-    console.print(Tables.from_dict(response['valuationRatio']))
+    console.print(Tables.from_dict(response["valuationRatio"]))
 
     print("Profiability")
-    console.print(Tables.from_dict(response['profitabilityRatio']))
+    console.print(Tables.from_dict(response["profitabilityRatio"]))
 
     print("Financial Health")
-    console.print(Tables.from_dict(response['financialHealth']))
+    console.print(Tables.from_dict(response["financialHealth"]))
 
     print("Efficiency")
-    console.print(Tables.from_dict(response['efficiencyRatio']))
+    console.print(Tables.from_dict(response["efficiencyRatio"]))
 
     print("Growth")
-    console.print(Tables.from_dict(response['growthRatio']))
-    console.print(Tables.from_dict(response['keyStatsQuoteJson']['revenue3YearGrowth']))
-    console.print(Tables.from_dict(response['keyStatsQuoteJson']['netIncome3YearGrowth']))
+    console.print(Tables.from_dict(response["growthRatio"]))
+    console.print(Tables.from_dict(response["keyStatsQuoteJson"]["revenue3YearGrowth"]))
+    console.print(Tables.from_dict(response["keyStatsQuoteJson"]["netIncome3YearGrowth"]))
 
     print("VS Industry")
-    keyStats = response['keyStatsQuoteJson']
-    del keyStats['revenue3YearGrowth']
-    del keyStats['netIncome3YearGrowth']
-    del keyStats['freeCashFlow']
+    keyStats = response["keyStatsQuoteJson"]
+    del keyStats["revenue3YearGrowth"]
+    del keyStats["netIncome3YearGrowth"]
+    del keyStats["freeCashFlow"]
     table = Table("", *keyStats.keys())
-    fromSymbol = ( str(val['stockValue']) for val in keyStats.values() )
+    fromSymbol = (str(val["stockValue"]) for val in keyStats.values())
     table.add_row("Current", *fromSymbol)
-    industryAvg = ( str(val['indAvg']) for val in keyStats.values() )
+    industryAvg = (str(val["indAvg"]) for val in keyStats.values())
     table.add_row("Industry Avg.", *industryAvg)
     console.print(table)
 
 
-@stocks_app.command(name='price-vs-fair-value', help="Morningstar estimate based on how much cash they think the company will generate")
+@stocks_app.command(
+    name="price-vs-fair-value",
+    help="Morningstar estimate based on how much cash they think the company will generate",
+)
 def priceVsFairValue(symbol: str, pid: TypeOfPerformanceIdOption = False):
     try:
         performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
@@ -170,38 +180,43 @@ def priceVsFairValue(symbol: str, pid: TypeOfPerformanceIdOption = False):
 
 
 @stocks_app.command(help="")
-def price(symbols: List[str]):
+def price(symbols: list[str]):
     try:
         response = morning_star.getInstrumentsPrice(symbols)
     except AxlError as e:
         raise typer.Exit(code=_format_error(e))
 
     for data in response:
-        color = 'green' if data['dayChange'] >= 0 else 'red'
-        currency_fmt_str = data['currencySymbol'] + '{:,.3f}'
-        colored_fmt_str = '[%s]%s' % (color, data['currencySymbol']) + '{:,.3f}'
-        data['_last'] = colored_fmt_str.format(data['lastPrice'])
-        data['_pct'] = '[%s]%.3f%%' % (color, data['dayChangePer'])
-        data['_change'] = colored_fmt_str.format(data['dayChange'])
-        data['_close'] = currency_fmt_str.format(data['lastClose'])
-        data['_high'] = currency_fmt_str.format(data['yearRangeHigh'])
-        data['_low'] = currency_fmt_str.format(data['yearRangeLow'])
-        data['_mcap'] = currency_fmt_str.format(data['marketCap'])
+        color = "green" if data["dayChange"] >= 0 else "red"
+        currency_fmt_str = data["currencySymbol"] + "{:,.3f}"
+        colored_fmt_str = "[{}]{}".format(color, data["currencySymbol"]) + "{:,.3f}"
+        data["_last"] = colored_fmt_str.format(data["lastPrice"])
+        data["_pct"] = "[{}]{:.3f}%".format(color, data["dayChangePer"])
+        data["_change"] = colored_fmt_str.format(data["dayChange"])
+        data["_close"] = currency_fmt_str.format(data["lastClose"])
+        data["_high"] = currency_fmt_str.format(data["yearRangeHigh"])
+        data["_low"] = currency_fmt_str.format(data["yearRangeLow"])
+        data["_mcap"] = currency_fmt_str.format(data["marketCap"])
 
-    console.print(Tables.from_list(response, columns=[
-        ("Last", "_last"),
-        ("%", "_pct"),
-        ("Change", "_change"),
-        ("Last close", "_close"),
-        ("52w High", "_high"),
-        ("52w Low", "_low"),
-        ("MarketCap", "_mcap"),
-        ("Currency", "currencyCode"),
-        ("ExchangeId", "exchangeID"),
-    ]))
+    console.print(
+        Tables.from_list(
+            response,
+            columns=[
+                ("Last", "_last"),
+                ("%", "_pct"),
+                ("Change", "_change"),
+                ("Last close", "_close"),
+                ("52w High", "_high"),
+                ("52w Low", "_low"),
+                ("MarketCap", "_mcap"),
+                ("Currency", "currencyCode"),
+                ("ExchangeId", "exchangeID"),
+            ],
+        )
+    )
 
 
-@stocks_app.command(name='avg-valuation')
+@stocks_app.command(name="avg-valuation")
 def avgValuation(symbol: str, pid: TypeOfPerformanceIdOption = False):
     try:
         performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
@@ -209,29 +224,25 @@ def avgValuation(symbol: str, pid: TypeOfPerformanceIdOption = False):
     except AxlError as e:
         raise typer.Exit(code=_format_error(e))
 
-    headers: list = response['Collapsed']['columnDefs']
+    headers: list = response["Collapsed"]["columnDefs"]
     del headers[0]
     headers.reverse()
     table = Table("Metric", *headers)
-    joinedRows = response['Collapsed']['rows'] + response['Expanded']['rows']
+    joinedRows = response["Collapsed"]["rows"] + response["Expanded"]["rows"]
     for row in joinedRows:
-        values: list = row['datum']
+        values: list = row["datum"]
         values.reverse()
-        table.add_row(
-            row['label'],
-            *values,
-            end_section=True
-        )
+        table.add_row(row["label"], *values, end_section=True)
 
     console.print(table)
 
-    footer = response['Collapsed']['footer']
+    footer = response["Collapsed"]["footer"]
     print(
-        f'As of "{footer['asOfDate'][:-7]}", Index is: {footer['indexName']}. Currency: {footer['enterpriseValueCurrency']}'
+        f'As of "{footer["asOfDate"][:-7]}", Index is: {footer["indexName"]}. Currency: {footer["enterpriseValueCurrency"]}'
     )
 
 
-@stocks_app.command(name='operating-efficiency')
+@stocks_app.command(name="operating-efficiency")
 def operatingEfficiency(symbol: str, pid: TypeOfPerformanceIdOption = False):
     try:
         performanceId: str = getPerformanceIdBySymbol(symbol, byPass=pid)
@@ -239,37 +250,50 @@ def operatingEfficiency(symbol: str, pid: TypeOfPerformanceIdOption = False):
     except AxlError as e:
         raise typer.Exit(code=_format_error(e))
 
-    data: list = response['dataList']
+    data: list = response["dataList"]
 
-    date_fmt = lambda v: v[:10]
-    num_fmt = lambda v: '%.3f' % v
+    def date_fmt(v):
+        return v[:10]
 
-    console.print(Tables.from_list(data, columns=[
-        ("FY", "fiscalPeriodYear", date_fmt),
-        ("MS-end-date", "morningstarEndingDate", date_fmt),
-        ("Gross Mrgn", "grossMargin", num_fmt),
-        ("Operating Mrgn", "operatingMargin", num_fmt),
-        ("Net Mrgn", "netMargin", num_fmt),
-        ("Ebitda Mrgn", "ebitdaMargin", num_fmt),
-        ("TaxRate", "taxRate", num_fmt),
-        ("ROA", "roa", num_fmt),
-        ("ROE", "roe", num_fmt),
-        ("ROIC", "roic", num_fmt),
-        ("Interest Coverage", "interestCoverage", num_fmt),
-    ]))
+    def num_fmt(v):
+        return f"{v:.3f}"
 
-    console.print(Tables.from_list(data, columns=[
-        ("FY", "fiscalPeriodYear", date_fmt),
-        ("MS-end-date", "morningstarEndingDate", date_fmt),
-        ("DaysInSales", "daysInSales", num_fmt),
-        ("DaysInInventory", "daysInInventory", num_fmt),
-        ("DaysInPayment", "daysInPayment", num_fmt),
-        ("CashConversionCycle", "cashConversionCycle", num_fmt),
-        ("ReceivableTurnover", "receivableTurnover", num_fmt),
-        ("InventoryTurnover", "inventoryTurnover", num_fmt),
-        ("FixedAssetsTurnover", "fixedAssetsTurnover", num_fmt),
-        ("AssetsTurnover", "assetsTurnover", num_fmt),
-    ]))
+    console.print(
+        Tables.from_list(
+            data,
+            columns=[
+                ("FY", "fiscalPeriodYear", date_fmt),
+                ("MS-end-date", "morningstarEndingDate", date_fmt),
+                ("Gross Mrgn", "grossMargin", num_fmt),
+                ("Operating Mrgn", "operatingMargin", num_fmt),
+                ("Net Mrgn", "netMargin", num_fmt),
+                ("Ebitda Mrgn", "ebitdaMargin", num_fmt),
+                ("TaxRate", "taxRate", num_fmt),
+                ("ROA", "roa", num_fmt),
+                ("ROE", "roe", num_fmt),
+                ("ROIC", "roic", num_fmt),
+                ("Interest Coverage", "interestCoverage", num_fmt),
+            ],
+        )
+    )
+
+    console.print(
+        Tables.from_list(
+            data,
+            columns=[
+                ("FY", "fiscalPeriodYear", date_fmt),
+                ("MS-end-date", "morningstarEndingDate", date_fmt),
+                ("DaysInSales", "daysInSales", num_fmt),
+                ("DaysInInventory", "daysInInventory", num_fmt),
+                ("DaysInPayment", "daysInPayment", num_fmt),
+                ("CashConversionCycle", "cashConversionCycle", num_fmt),
+                ("ReceivableTurnover", "receivableTurnover", num_fmt),
+                ("InventoryTurnover", "inventoryTurnover", num_fmt),
+                ("FixedAssetsTurnover", "fixedAssetsTurnover", num_fmt),
+                ("AssetsTurnover", "assetsTurnover", num_fmt),
+            ],
+        )
+    )
 
 
 @stocks_app.command(help="Show competitors of a symbol")
@@ -286,29 +310,38 @@ def competitors(symbol: str, pid: TypeOfPerformanceIdOption = False):
         return
 
     for c in comps:
-        c['_ticker'] = c['ticker']
-        c['_name'] = c['name']
-        c['_price'] = f'{float(c["lastCloseDB"]):.2f}' if c["lastCloseDB"] is not None else '—'
-        c['_currency'] = c.get('lastCloseCurrencyDB', 'N/A')
-        c['_pe'] = f'{float(c["priceEarnings"]):.2f}' if c["priceEarnings"] is not None else '—'
-        c['_opMargin'] = f'{float(c["operatingMargin"]):.2f}%' if c["operatingMargin"] is not None else '—'
-        c['_revGrowth'] = f'{float(c["revenueGrowth"]):.2f}%' if c["revenueGrowth"] is not None else '—'
-        c['_priceSale'] = f'{float(c["priceSale"]):.2f}' if c["priceSale"] is not None else '—'
+        c["_ticker"] = c["ticker"]
+        c["_name"] = c["name"]
+        c["_price"] = f"{float(c['lastCloseDB']):.2f}" if c["lastCloseDB"] is not None else "—"
+        c["_currency"] = c.get("lastCloseCurrencyDB", "N/A")
+        c["_pe"] = f"{float(c['priceEarnings']):.2f}" if c["priceEarnings"] is not None else "—"
+        c["_opMargin"] = (
+            f"{float(c['operatingMargin']):.2f}%" if c["operatingMargin"] is not None else "—"
+        )
+        c["_revGrowth"] = (
+            f"{float(c['revenueGrowth']):.2f}%" if c["revenueGrowth"] is not None else "—"
+        )
+        c["_priceSale"] = f"{float(c['priceSale']):.2f}" if c["priceSale"] is not None else "—"
 
-    console.print(Tables.from_list(comps, columns=[
-        ('Ticker', '_ticker'),
-        ('Name', '_name'),
-        ('Price', '_price'),
-        ('Currency', '_currency'),
-        ('P/E', '_pe'),
-        ('Price/Sales', '_priceSale'),
-        ('Op. Margin', '_opMargin'),
-        ('Rev. Growth', '_revGrowth'),
-    ]))
+    console.print(
+        Tables.from_list(
+            comps,
+            columns=[
+                ("Ticker", "_ticker"),
+                ("Name", "_name"),
+                ("Price", "_price"),
+                ("Currency", "_currency"),
+                ("P/E", "_pe"),
+                ("Price/Sales", "_priceSale"),
+                ("Op. Margin", "_opMargin"),
+                ("Rev. Growth", "_revGrowth"),
+            ],
+        )
+    )
 
 
 @stocks_app.command()
-def comparator(symbols: List[str], pid: TypeOfPerformanceIdOption = False):
+def comparator(symbols: list[str], pid: TypeOfPerformanceIdOption = False):
     try:
         performanceIds = list(getPerformanceIdBySymbol(symbol, byPass=pid) for symbol in symbols)
         comparation = SpreadSheetComparation()
