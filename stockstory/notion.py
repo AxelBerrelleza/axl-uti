@@ -4,6 +4,7 @@
 Fails fast with actionable guidance when the ntn CLI is missing or logged out,
 so a long generation run doesn't die at the publishing step.
 """
+
 import json
 import shutil
 import subprocess
@@ -16,7 +17,7 @@ class NtnError(RuntimeError):
 
 def ntn_api(args: list[str], body: dict | None = None) -> dict:
     """Run `ntn api <args>` and return parsed JSON. Raises NtnError on failure."""
-    cmd = ["ntn", "api"] + args
+    cmd = ["ntn", "api", *args]
     if body is not None:
         cmd += ["-d", json.dumps(body)]
     r = subprocess.run(cmd, capture_output=True, text=True)
@@ -40,8 +41,10 @@ def preflight() -> str:
 
 def set_title(page_id: str, title: str) -> None:
     """ntn pages create does not always set the page title property; force it."""
-    ntn_api([f"v1/pages/{page_id}", "-X", "PATCH"],
-            {"properties": {"title": [{"text": {"content": title}}]}})
+    ntn_api(
+        [f"v1/pages/{page_id}", "-X", "PATCH"],
+        {"properties": {"title": [{"text": {"content": title}}]}},
+    )
 
 
 def find_child_pages(block_id: str) -> dict[str, str]:

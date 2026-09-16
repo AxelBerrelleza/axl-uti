@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
-from commands.errors import ConfigMissingError, ConfigInvalidError
+
+from commands.errors import ConfigInvalidError, ConfigMissingError
 from commands.stocks.errors import SymbolNotFoundError
 
 
@@ -26,9 +27,7 @@ def resolve(ticker: str) -> str:
     try:
         data: dict = json.loads(config_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        raise ConfigInvalidError(
-            f"Invalid JSON in symbol config '{config_path}': {exc}"
-        ) from exc
+        raise ConfigInvalidError(f"Invalid JSON in symbol config '{config_path}': {exc}") from exc
 
     if ticker not in data:
         available = ", ".join(sorted(data.keys()))

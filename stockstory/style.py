@@ -3,9 +3,11 @@
 All charts render with one look so every ticker's story feels like the same
 report. Sized for Notion page width, PNG, well under the 5 MB free-plan limit.
 """
+
 import matplotlib
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.pyplot as plt
 
 # palette
 INK = "#1a2332"
@@ -20,25 +22,27 @@ SERIES_COLORS = [BLUE, ORANGE, GREEN, RED, "#7f5fb0", "#4fa3a5"]
 FIGSIZE = (12, 5)
 DPI = 140  # -> 1680px wide, Notion-friendly
 
-plt.rcParams.update({
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-    "axes.edgecolor": GREY,
-    "axes.grid": True,
-    "grid.color": LIGHT,
-    "grid.linewidth": 1.0,
-    "axes.axisbelow": True,
-    "font.family": "DejaVu Sans",
-    "font.size": 11,
-    "axes.titlesize": 14,
-    "axes.titleweight": "bold",
-    "axes.titlecolor": INK,
-    "axes.labelcolor": INK,
-    "xtick.color": INK,
-    "ytick.color": INK,
-    "legend.frameon": False,
-    "figure.dpi": DPI,
-})
+plt.rcParams.update(
+    {
+        "figure.facecolor": "white",
+        "axes.facecolor": "white",
+        "axes.edgecolor": GREY,
+        "axes.grid": True,
+        "grid.color": LIGHT,
+        "grid.linewidth": 1.0,
+        "axes.axisbelow": True,
+        "font.family": "DejaVu Sans",
+        "font.size": 11,
+        "axes.titlesize": 14,
+        "axes.titleweight": "bold",
+        "axes.titlecolor": INK,
+        "axes.labelcolor": INK,
+        "xtick.color": INK,
+        "ytick.color": INK,
+        "legend.frameon": False,
+        "figure.dpi": DPI,
+    }
+)
 
 
 def new_figure(title: str, tall: bool = False):
