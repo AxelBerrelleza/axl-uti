@@ -7,10 +7,7 @@ A CLI for querying Morningstar stock data via RapidAPI.
 ### 1. Python environment
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -r requirements/dev.txt
+uv sync --extra dev
 ```
 
 ### 2. API key
@@ -45,15 +42,22 @@ git-ignored). The CLI checks `./symbols.json` first, then `~/.axl-uti/symbols.js
 To find the PerformanceId for any symbol, use the `search` command:
 
 ```bash
-python main.py stocks search MSFT
+uv run python main.py stocks search MSFT
 ```
 
 ## Usage
 
+`uv run` automatically uses the project's `.venv` without requiring manual activation.
+If you already have the venv activated (`source .venv/bin/activate`), `python main.py` works identically.
+
 ```bash
-python main.py --help
-python main.py stocks search MSFT
-python main.py stocks overview MSFT
+# Recommended (no venv activation needed)
+uv run python main.py --help
+uv run python main.py stocks search MSFT
+uv run python main.py stocks overview MSFT
 # Use a raw PerformanceId directly (bypasses symbol lookup)
-python main.py stocks overview --pid 0P000003MH
+uv run python main.py stocks overview --pid 0P000003MH
+
+# Also works with an activated venv
+python main.py stocks search MSFT
 ```

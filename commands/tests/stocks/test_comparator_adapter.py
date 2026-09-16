@@ -1,14 +1,14 @@
-import pytest
 from unittest.mock import patch
 
-from commands.stocks.comparator_input import ComparatorInput
-from commands.stocks.comparator_adapter import (
-    ComparatorDataAdapter,
-    OverviewAdapter,
-    FallbackAdapter,
-)
-from commands.stocks.errors import ComparatorError
+import pytest
+
 from commands.errors import APIServerError
+from commands.stocks.comparator_adapter import (
+    FallbackAdapter,
+    OverviewAdapter,
+)
+from commands.stocks.comparator_input import ComparatorInput
+from commands.stocks.errors import ComparatorError
 from commands.tests.fixtures import APIResponses
 
 
@@ -58,7 +58,9 @@ class TestComparatorInput:
 class TestOverviewAdapter:
     def test_fetch_returns_populated_input(self):
         adapter = OverviewAdapter()
-        with patch('commands.stocks.comparator_adapter.getOverview', return_value=APIResponses.MS.OVERVIEW):
+        with patch(
+            "commands.stocks.comparator_adapter.getOverview", return_value=APIResponses.MS.OVERVIEW
+        ):
             result = adapter.fetch("0P000002HD")
 
         assert isinstance(result, ComparatorInput)
@@ -74,17 +76,33 @@ class TestOverviewAdapter:
 
     def test_fetch_raises_on_api_error(self):
         adapter = OverviewAdapter()
-        with patch('commands.stocks.comparator_adapter.getOverview', side_effect=APIServerError(503, '/overview')):
-            with pytest.raises(APIServerError):
-                adapter.fetch("0P000002HD")
+        with (
+            patch(
+                "commands.stocks.comparator_adapter.getOverview",
+                side_effect=APIServerError(503, "/overview"),
+            ),
+            pytest.raises(APIServerError),
+        ):
+            adapter.fetch("0P000002HD")
 
 
 class TestFallbackAdapter:
     def test_fetch_returns_populated_input(self):
         adapter = FallbackAdapter()
-        with patch('commands.stocks.comparator_adapter.getFinancialHealth', return_value=APIResponses.MS.FINANCIAL_HEALTH), \
-             patch('commands.stocks.comparator_adapter.getOperatingEfficency', return_value=APIResponses.MS.OPERATING_EFFICIENCY), \
-             patch('commands.stocks.comparator_adapter.getAvgValuation', return_value=APIResponses.MS.AVG_VALUATION):
+        with (
+            patch(
+                "commands.stocks.comparator_adapter.getFinancialHealth",
+                return_value=APIResponses.MS.FINANCIAL_HEALTH,
+            ),
+            patch(
+                "commands.stocks.comparator_adapter.getOperatingEfficency",
+                return_value=APIResponses.MS.OPERATING_EFFICIENCY,
+            ),
+            patch(
+                "commands.stocks.comparator_adapter.getAvgValuation",
+                return_value=APIResponses.MS.AVG_VALUATION,
+            ),
+        ):
             result = adapter.fetch("0P000002HD")
 
         assert isinstance(result, ComparatorInput)
@@ -101,19 +119,28 @@ class TestFallbackAdapter:
     def test_fetch_empty_financial_health_raises(self):
         adapter = FallbackAdapter()
         empty_response = {"currency": "USD", "asOfDate": "2026-03-31", "dataList": []}
-        with patch('commands.stocks.comparator_adapter.getFinancialHealth', return_value=empty_response):
-            with pytest.raises(ComparatorError, match="No financial health data"):
-                adapter.fetch("0P000002HD")
+        with (
+            patch(
+                "commands.stocks.comparator_adapter.getFinancialHealth", return_value=empty_response
+            ),
+            pytest.raises(ComparatorError, match="No financial health data"),
+        ):
+            adapter.fetch("0P000002HD")
 
     def test_fetch_missing_fields_returns_none(self):
         adapter = FallbackAdapter()
-        partial_fh = {
-            "dataList": [{"fiscalPeriodYearMonth": "Latest Qtr", "currentRatio": 2.0}]
-        }
+        partial_fh = {"dataList": [{"fiscalPeriodYearMonth": "Latest Qtr", "currentRatio": 2.0}]}
         empty_oe = {"dataList": []}
-        with patch('commands.stocks.comparator_adapter.getFinancialHealth', return_value=partial_fh), \
-             patch('commands.stocks.comparator_adapter.getOperatingEfficency', return_value=empty_oe), \
-             patch('commands.stocks.comparator_adapter.getAvgValuation', return_value=APIResponses.MS.AVG_VALUATION):
+        with (
+            patch("commands.stocks.comparator_adapter.getFinancialHealth", return_value=partial_fh),
+            patch(
+                "commands.stocks.comparator_adapter.getOperatingEfficency", return_value=empty_oe
+            ),
+            patch(
+                "commands.stocks.comparator_adapter.getAvgValuation",
+                return_value=APIResponses.MS.AVG_VALUATION,
+            ),
+        ):
             result = adapter.fetch("0P000002HD")
 
         assert result.currentRatio == 2.0
@@ -124,21 +151,45 @@ class TestFallbackAdapter:
 
     def test_fetch_financial_health_api_error(self):
         adapter = FallbackAdapter()
-        with patch('commands.stocks.comparator_adapter.getFinancialHealth', side_effect=APIServerError(503, '/fh')):
-            with pytest.raises(APIServerError):
-                adapter.fetch("0P000002HD")
+        with (
+            patch(
+                "commands.stocks.comparator_adapter.getFinancialHealth",
+                side_effect=APIServerError(503, "/fh"),
+            ),
+            pytest.raises(APIServerError),
+        ):
+            adapter.fetch("0P000002HD")
 
     def test_fetch_operating_efficiency_api_error(self):
         adapter = FallbackAdapter()
-        with patch('commands.stocks.comparator_adapter.getFinancialHealth', return_value=APIResponses.MS.FINANCIAL_HEALTH), \
-             patch('commands.stocks.comparator_adapter.getOperatingEfficency', side_effect=APIServerError(503, '/oe')):
-            with pytest.raises(APIServerError):
-                adapter.fetch("0P000002HD")
+        with (
+            patch(
+                "commands.stocks.comparator_adapter.getFinancialHealth",
+                return_value=APIResponses.MS.FINANCIAL_HEALTH,
+            ),
+            patch(
+                "commands.stocks.comparator_adapter.getOperatingEfficency",
+                side_effect=APIServerError(503, "/oe"),
+            ),
+            pytest.raises(APIServerError),
+        ):
+            adapter.fetch("0P000002HD")
 
     def test_fetch_valuation_api_error(self):
         adapter = FallbackAdapter()
-        with patch('commands.stocks.comparator_adapter.getFinancialHealth', return_value=APIResponses.MS.FINANCIAL_HEALTH), \
-             patch('commands.stocks.comparator_adapter.getOperatingEfficency', return_value=APIResponses.MS.OPERATING_EFFICIENCY), \
-             patch('commands.stocks.comparator_adapter.getAvgValuation', side_effect=APIServerError(503, '/val')):
-            with pytest.raises(APIServerError):
-                adapter.fetch("0P000002HD")
+        with (
+            patch(
+                "commands.stocks.comparator_adapter.getFinancialHealth",
+                return_value=APIResponses.MS.FINANCIAL_HEALTH,
+            ),
+            patch(
+                "commands.stocks.comparator_adapter.getOperatingEfficency",
+                return_value=APIResponses.MS.OPERATING_EFFICIENCY,
+            ),
+            patch(
+                "commands.stocks.comparator_adapter.getAvgValuation",
+                side_effect=APIServerError(503, "/val"),
+            ),
+            pytest.raises(APIServerError),
+        ):
+            adapter.fetch("0P000002HD")

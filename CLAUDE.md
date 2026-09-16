@@ -2,22 +2,23 @@
 
 ## Setup
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements/dev.txt
+uv sync --extra dev
 cp .env.sample .env  # then set MS_API_KEY
 ```
 
 ## Run
 ```bash
-python main.py --help
-python main.py stocks search MSFT
-python main.py stocks overview MSFT
+uv run python main.py --help
+uv run python main.py stocks search MSFT
+uv run python main.py stocks overview MSFT
 ```
 
-## Test
+## Test & Quality Gates
 ```bash
-pytest -v
-pytest commands/tests/stocks/test_comparator.py -v
+uv run ruff format --check .
+uv run ruff check .
+uv run mypy commands stockstory
+uv run pytest
 ```
 
 ## Architecture
@@ -31,8 +32,12 @@ pytest commands/tests/stocks/test_comparator.py -v
 - Uses `requests-mock` and `typer.testing.CliRunner` — mock data lives in `commands/tests/fixtures/APIResponses.py`
 - Test `test_comparator` creates an actual `.xlsx` file — requires `assets/base-sheet.xlsx` to exist
 
-## Constraints
-- No linter, formatter, or typechecker config — do not run `ruff`, `mypy`, etc.
+## Quality Standards
+- **Formatting**: `uv run ruff format .` (enforces PEP 8, line length 100)
+- **Linting**: `uv run ruff check --fix .` (safe auto-fixes enabled)
+- **Static Typing**: `uv run mypy commands stockstory`
+- **Testing**: `uv run pytest`
+- Always verify all four quality gates pass cleanly before finishing any task.
 
 <!-- BACKLOG.MD GUIDELINES START -->
 # Instructions for the usage of Backlog.md CLI Tool

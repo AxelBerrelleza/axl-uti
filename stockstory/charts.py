@@ -10,7 +10,9 @@ file's "Chart slots" table, writes WORKDIR/charts/<slot>.png and prints
 Chart slots are driven by the template file, not hard-coded here: adding a
 slot to the template table is enough if a renderer with that name exists.
 """
+
 import argparse
+import itertools
 import json
 import re
 from pathlib import Path
@@ -38,6 +40,7 @@ def _num(v):
 
 # ---------------------------------------------------------------- renderers
 
+
 def solvency_liquidity(data: dict, out: Path):
     fh = data.get("financial_health")
     if not fh or not fh.get("series"):
@@ -47,20 +50,36 @@ def solvency_liquidity(data: dict, out: Path):
     series = fh["series"]
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(S.FIGSIZE[0], S.FIGSIZE[1]))
-    fig.suptitle("Solvency & Liquidity Ratios", x=0.02, ha="left",
-                 fontsize=14, fontweight="bold", color=S.INK)
+    fig.suptitle(
+        "Solvency & Liquidity Ratios",
+        x=0.02,
+        ha="left",
+        fontsize=14,
+        fontweight="bold",
+        color=S.INK,
+    )
 
     for i, key in enumerate(("currentRatio", "quickRatio")):
         if key in series:
-            ax1.plot(periods, [_num(v) for v in series[key]], marker="o",
-                     color=S.SERIES_COLORS[i], label=key)
+            ax1.plot(
+                periods,
+                [_num(v) for v in series[key]],
+                marker="o",
+                color=S.SERIES_COLORS[i],
+                label=key,
+            )
     ax1.set_title("Liquidity", loc="left")
     ax1.legend()
 
     for i, key in enumerate(("debtEquityRatio", "financialLeverage")):
         if key in series:
-            ax2.plot(periods, [_num(v) for v in series[key]], marker="o",
-                     color=S.SERIES_COLORS[i + 2], label=key)
+            ax2.plot(
+                periods,
+                [_num(v) for v in series[key]],
+                marker="o",
+                color=S.SERIES_COLORS[i + 2],
+                label=key,
+            )
     ax2.set_title("Leverage", loc="left")
     ax2.legend()
 
@@ -82,20 +101,29 @@ def profitability(data: dict, out: Path):
     xs = [periods[i] for i in keep]
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(S.FIGSIZE[0], S.FIGSIZE[1]))
-    fig.suptitle("Profitability", x=0.02, ha="left",
-                 fontsize=14, fontweight="bold", color=S.INK)
+    fig.suptitle("Profitability", x=0.02, ha="left", fontsize=14, fontweight="bold", color=S.INK)
 
     for i, key in enumerate(("grossMargin", "operatingMargin", "ebitdaMargin", "netMargin")):
         if key in series:
-            ax1.plot(xs, [_num(series[key][j]) for j in keep], marker="o",
-                     color=S.SERIES_COLORS[i], label=key.replace("Margin", " margin"))
+            ax1.plot(
+                xs,
+                [_num(series[key][j]) for j in keep],
+                marker="o",
+                color=S.SERIES_COLORS[i],
+                label=key.replace("Margin", " margin"),
+            )
     ax1.set_title("Margins (%)", loc="left")
     ax1.legend(fontsize=9)
 
     for i, key in enumerate(("roe", "roic", "roa")):
         if key in series:
-            ax2.plot(xs, [_num(series[key][j]) for j in keep], marker="o",
-                     color=S.SERIES_COLORS[i], label=key.upper())
+            ax2.plot(
+                xs,
+                [_num(series[key][j]) for j in keep],
+                marker="o",
+                color=S.SERIES_COLORS[i],
+                label=key.upper(),
+            )
     ax2.set_title("Returns on capital (%)", loc="left")
     ax2.legend()
 
@@ -114,13 +142,12 @@ def growth(data: dict, out: Path):
     if not revenue or not columns:
         return None, "no income statement data"
     years = [c for c in columns if c != "TTM"]
-    rev = [_num(v) for v in revenue[:len(years)]]
+    rev = [_num(v) for v in revenue[: len(years)]]
 
     cur = data.get("statement_currency") or data.get("currency", "USD")
     fig, ax = S.new_figure(f"Growth — Total Revenue ({cur} billions)")
     ax.bar(years, rev, color=S.BLUE, width=0.55, label="Total Revenue")
-    yoy = [None] + [((b - a) / a * 100) if a else None
-                    for a, b in zip(rev, rev[1:])]
+    yoy = [None] + [((b - a) / a * 100) if a else None for a, b in itertools.pairwise(rev)]
     ax2 = ax.twinx()
     ax2.grid(False)
     ax2.plot(years, yoy, color=S.ORANGE, marker="o", label="Revenue YoY %")
@@ -138,9 +165,12 @@ def price_vs_fair_value(data: dict, out: Path):
         return None, "insufficient price/fair-value history"
     dates = pd.to_datetime([m["date"] for m in pts])
     closes = [m["close"] for m in pts]
-    fvs = [(_num(m["close"]) / m["price_to_fair_value"])
-           if m.get("price_to_fair_value") and 0.2 <= m["price_to_fair_value"] <= 3.0
-           else None for m in pts]
+    fvs = [
+        (_num(m["close"]) / m["price_to_fair_value"])
+        if m.get("price_to_fair_value") and 0.2 <= m["price_to_fair_value"] <= 3.0
+        else None
+        for m in pts
+    ]
 
     fig, ax = S.new_figure("Price vs Morningstar Fair Value (monthly)")
     ax.plot(dates, closes, "-", color=S.BLUE, label="Close price")
@@ -160,8 +190,7 @@ def avg_valuation(data: dict, out: Path):
     try:
         i_cur = cols.index("Current")
     except ValueError:  # current column renamed (e.g. '2026-Q2')
-        cand = [i for i, c in enumerate(cols)
-                if re.fullmatch(r"\d{4}-[QH]\d", c or "")]
+        cand = [i for i, c in enumerate(cols) if re.fullmatch(r"\d{4}-[QH]\d", c or "")]
         if not cand:
             return None, "avg_valuation current column not recognized"
         i_cur = cand[0]
@@ -177,18 +206,25 @@ def avg_valuation(data: dict, out: Path):
         return None, "no core valuation multiples"
 
     fig, ax = plt.subplots(figsize=(S.FIGSIZE[0], 0.6 * (len(rows) + 2) + 0.8))
-    ax.set_title(f"Valuation — {cols[i_cur]} vs 5-yr average vs Industry",
-                 loc="left", pad=14, fontsize=14, fontweight="bold", color=S.INK)
+    ax.set_title(
+        f"Valuation — {cols[i_cur]} vs 5-yr average vs Industry",
+        loc="left",
+        pad=14,
+        fontsize=14,
+        fontweight="bold",
+        color=S.INK,
+    )
     ax.axis("off")
     table = ax.table(
         cellText=[[label, *_fmt3((cur, i5, idx))] for label, cur, i5, idx in rows],
         colLabels=["Multiple", cols[i_cur], "5-Yr Avg", "Industry"],
-        loc="center", cellLoc="center",
+        loc="center",
+        cellLoc="center",
     )
     table.auto_set_font_size(False)
     table.set_fontsize(11)
     table.scale(1, 1.8)
-    for (r, c), cell in table.get_celld().items():
+    for (r, _c), cell in table.get_celld().items():
         if r == 0:
             cell.set_facecolor(S.INK)
             cell.set_text_props(color="white", weight="bold")
@@ -217,9 +253,13 @@ RENDERERS = {
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("workdir")
-    p.add_argument("--template",
-                   default=str(Path(__file__).resolve().parent.parent /
-                               ".agents/skills/stock-story/stock-story-template.md"))
+    p.add_argument(
+        "--template",
+        default=str(
+            Path(__file__).resolve().parent.parent
+            / ".agents/skills/stock-story/stock-story-template.md"
+        ),
+    )
     args = p.parse_args()
 
     workdir = Path(args.workdir)
@@ -235,7 +275,7 @@ def main():
             continue
         try:
             path, err = fn(data, charts_dir / f"{slot}.png")
-        except Exception as e:  # noqa: BLE001 — one bad chart must not kill the run
+        except Exception as e:
             path, err = None, f"{type(e).__name__}: {e}"
         print(f"{slot}={path}" if path else f"{slot}=SKIPPED ({err})")
 

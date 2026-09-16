@@ -1,17 +1,19 @@
 """Tests for commands/stocks/symbols.py loader module."""
+
 import json
-import pytest
 from pathlib import Path
 from unittest.mock import patch
 
-import commands.stocks.symbols as sym_module
-from commands.errors import ConfigMissingError, ConfigInvalidError
-from commands.stocks.errors import SymbolNotFoundError
+import pytest
 
+import commands.stocks.symbols as sym_module
+from commands.errors import ConfigInvalidError, ConfigMissingError
+from commands.stocks.errors import SymbolNotFoundError
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _write_json(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -24,6 +26,7 @@ SAMPLE_CONFIG = {"MSFT": "0P000003MH", "AAPL": "0P000000GY", "AMZN": "0P000000B7
 # ---------------------------------------------------------------------------
 # 3.2  Config found at project root → resolves correctly
 # ---------------------------------------------------------------------------
+
 
 def test_resolve_from_project_root(tmp_path):
     config = tmp_path / "symbols.json"
@@ -39,6 +42,7 @@ def test_resolve_from_project_root(tmp_path):
 # 3.3  Config found at user home (project root absent) → resolves correctly
 # ---------------------------------------------------------------------------
 
+
 def test_resolve_from_user_home(tmp_path):
     home_config = tmp_path / ".axl-uti" / "symbols.json"
     _write_json(home_config, SAMPLE_CONFIG)
@@ -53,6 +57,7 @@ def test_resolve_from_user_home(tmp_path):
 # ---------------------------------------------------------------------------
 # 3.1 / priority: project root takes precedence over user home
 # ---------------------------------------------------------------------------
+
 
 def test_find_config_prefers_project_root(tmp_path, monkeypatch):
     """_find_config should return ./symbols.json when both locations exist."""
@@ -91,6 +96,7 @@ def test_find_config_falls_back_to_home(tmp_path, monkeypatch):
 # 3.4  No config file found → raises error with helpful message
 # ---------------------------------------------------------------------------
 
+
 def test_resolve_no_config_raises(tmp_path):
     with patch.object(sym_module, "_find_config", return_value=None):
         with pytest.raises(ConfigMissingError) as exc_info:
@@ -103,6 +109,7 @@ def test_resolve_no_config_raises(tmp_path):
 # ---------------------------------------------------------------------------
 # 3.5  Unknown ticker → raises KeyError with available tickers listed
 # ---------------------------------------------------------------------------
+
 
 def test_resolve_unknown_ticker_raises_key_error(tmp_path):
     config = tmp_path / "symbols.json"
@@ -121,6 +128,7 @@ def test_resolve_unknown_ticker_raises_key_error(tmp_path):
 # ---------------------------------------------------------------------------
 # 3.6  Invalid JSON in config → raises parse error with file path
 # ---------------------------------------------------------------------------
+
 
 def test_resolve_invalid_json_raises(tmp_path):
     config = tmp_path / "symbols.json"

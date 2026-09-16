@@ -1,12 +1,12 @@
 # Orca worktree configuration.
 # `setup` runs automatically after each new worktree is created (repo hook
 # policy is "run-by-default"). It gives every worktree its own isolated
-# Python environment (Option A: fresh venv per worktree).
+# Python environment using uv (bootstrapped via pip since uv is not yet
+# installed when a fresh worktree is created).
 #
 # Gitignored essentials (.env, symbols.json) are copied into new worktrees
 # via .worktreeinclude — see that file.
 scripts:
   setup: |
-    python3 -m venv .venv
-    .venv/bin/pip install --quiet --upgrade pip
-    .venv/bin/pip install --quiet -r requirements/dev.txt
+    .venv/bin/pip install --quiet uv
+    .venv/bin/uv sync --extra dev

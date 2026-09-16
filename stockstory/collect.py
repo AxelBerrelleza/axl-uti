@@ -6,10 +6,10 @@ Usage:
 Writes DIR/data.json. The adapter is swappable (design D2); this entry point
 normalizes adapter output into the stable contract and records coverage.
 """
+
 import argparse
 import json
-import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -29,7 +29,7 @@ def build_dataset(ticker: str) -> dict:
     return {
         "ticker": ticker,
         "performance_id": pid,
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "source_adapter": adapter_repo.NAME,
         "currency": currency,
         "units": {"money": "billions", "pct": "percent", "ratios": "raw"},
@@ -60,4 +60,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
