@@ -26,12 +26,22 @@ def build_dataset(ticker: str) -> dict:
     if sections.get("price", {}).get("currency"):
         currency = sections["price"]["currency"]
 
+    # reporting currency of the statements, from the adapter's statement footer
+    # (distinct from `currency`, which is the spot-quote trading currency)
+    statements = sections.get("statements", {})
+    statement_currency = next(
+        filter(None, (statements.get(k, {}).get("currency")
+                      for k in ("income_statement", "balance_sheet", "cash_flow"))),
+        None,
+    )
+
     return {
         "ticker": ticker,
         "performance_id": pid,
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "source_adapter": adapter_repo.NAME,
         "currency": currency,
+        "statement_currency": statement_currency,
         "units": {"money": "billions", "pct": "percent", "ratios": "raw"},
         **sections,
         "coverage": {

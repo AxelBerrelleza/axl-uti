@@ -10,7 +10,9 @@ stages must never depend on source-specific field names.
   "performance_id": "0P000000B7",
   "generated_at": "2026-07-07T12:00:00Z",      // ISO-8601 UTC
   "source_adapter": "repo-morningstar",
-  "currency": "USD",                            // reporting currency
+  "currency": "USD",                            // spot-quote TRADING currency
+  "statement_currency": "MXN",                  // REPORTING currency of the statements,
+                                                 // from the adapter footer; null if unknown
   "units": {                                    // global unit declarations
     "money": "billions",                        // statement values (repo adapter)
     "pct": "percent",                           // 12.3 means 12.3%
@@ -27,7 +29,9 @@ stages must never depend on source-specific field names.
   "statements": {                               // multi-year, annual
     "income_statement":  {"columns": ["2023","2024","2025","TTM"],
                           "period_end_dates": ["20231231","20241231","20251231","20260630"],
-                          "rows": {"Total Revenue": [574.79, 637.96, 716.92, 775.68]}},
+                          "rows": {"Total Revenue": [574.79, 637.96, 716.92, 775.68]},
+                          "currency": "MXN",                  // statement footer currency
+                          "order_of_magnitude": "Billion"},   // statement footer magnitude
     "balance_sheet":     {"columns": [...], "period_end_dates": [...], "rows": {...}},
     "cash_flow":         {"columns": [...], "period_end_dates": [...], "rows": {...}}
   },
