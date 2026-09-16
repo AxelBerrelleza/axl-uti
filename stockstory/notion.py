@@ -53,7 +53,7 @@ def find_child_pages(block_id: str) -> dict[str, str]:
     while True:
         args = [f"v1/blocks/{block_id}/children", "page_size==100"]
         if cursor:
-            args.append(f"starting_cursor=={cursor}")
+            args.append(f"start_cursor=={cursor}")
         d = ntn_api(args)
         for b in d["results"]:
             if b["type"] == "child_page":
