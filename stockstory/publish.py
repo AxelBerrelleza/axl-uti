@@ -83,7 +83,7 @@ def page_children(page_id: str) -> list:
     while True:
         args = [f"v1/blocks/{page_id}/children", "page_size==100"]
         if cursor:
-            args.append(f"starting_cursor=={cursor}")
+            args.append(f"start_cursor=={cursor}")
         d = notion.ntn_api(args)
         out += d["results"]
         if not d["has_more"]:

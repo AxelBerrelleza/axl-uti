@@ -42,7 +42,8 @@ def solvency_liquidity(data: dict, out: Path):
     fh = data.get("financial_health")
     if not fh or not fh.get("series"):
         return None, "no financial_health data"
-    periods = [p[:4] for p in fh["periods"]]  # '2016-12' -> '2016'
+    # '2016-12' -> '2016'; named periods (e.g. '2026-Q2') kept as-is
+    periods = [p[:4] if re.fullmatch(r"\d{4}-\d{2}", p) else p for p in fh["periods"]]
     series = fh["series"]
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(S.FIGSIZE[0], S.FIGSIZE[1]))
@@ -76,9 +77,8 @@ def profitability(data: dict, out: Path):
     if not oe or not oe.get("series"):
         return None, "no operating_efficiency data"
     periods, series = oe["periods"], oe["series"]
-    # keep fiscal years plus the 5-yr average column
-    keep = [i for i, p in enumerate(periods)
-            if p.isdigit() or p in ("5-Yr", "Current")]
+    # keep fiscal years, the 5-yr average and any current/quarter column
+    keep = [i for i, p in enumerate(periods) if p != "Index"]
     xs = [periods[i] for i in keep]
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(S.FIGSIZE[0], S.FIGSIZE[1]))
@@ -116,7 +116,8 @@ def growth(data: dict, out: Path):
     years = [c for c in columns if c != "TTM"]
     rev = [_num(v) for v in revenue[:len(years)]]
 
-    fig, ax = S.new_figure("Growth — Total Revenue (USD billions)")
+    cur = data.get("statement_currency") or data.get("currency", "USD")
+    fig, ax = S.new_figure(f"Growth — Total Revenue ({cur} billions)")
     ax.bar(years, rev, color=S.BLUE, width=0.55, label="Total Revenue")
     yoy = [None] + [((b - a) / a * 100) if a else None
                     for a, b in zip(rev, rev[1:])]
@@ -157,7 +158,15 @@ def avg_valuation(data: dict, out: Path):
     if cols and cols[0] == "Calendar":
         cols = cols[1:]  # label-column header; datum lists don't include it
     try:
-        i_cur, i_5y, i_idx = cols.index("Current"), cols.index("5-Yr"), cols.index("Index")
+        i_cur = cols.index("Current")
+    except ValueError:  # current column renamed (e.g. '2026-Q2')
+        cand = [i for i, c in enumerate(cols)
+                if re.fullmatch(r"\d{4}-[QH]\d", c or "")]
+        if not cand:
+            return None, "avg_valuation current column not recognized"
+        i_cur = cand[0]
+    try:
+        i_5y, i_idx = cols.index("5-Yr"), cols.index("Index")
     except ValueError:
         return None, "avg_valuation columns not recognized"
 
@@ -168,12 +177,12 @@ def avg_valuation(data: dict, out: Path):
         return None, "no core valuation multiples"
 
     fig, ax = plt.subplots(figsize=(S.FIGSIZE[0], 0.6 * (len(rows) + 2) + 0.8))
-    ax.set_title("Valuation — Current vs 5-yr average vs Industry",
+    ax.set_title(f"Valuation — {cols[i_cur]} vs 5-yr average vs Industry",
                  loc="left", pad=14, fontsize=14, fontweight="bold", color=S.INK)
     ax.axis("off")
     table = ax.table(
         cellText=[[label, *_fmt3((cur, i5, idx))] for label, cur, i5, idx in rows],
-        colLabels=["Multiple", "Current", "5-Yr Avg", "Industry"],
+        colLabels=["Multiple", cols[i_cur], "5-Yr Avg", "Industry"],
         loc="center", cellLoc="center",
     )
     table.auto_set_font_size(False)
