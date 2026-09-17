@@ -49,10 +49,13 @@ def _statements(raw: dict) -> dict:
         stmt = raw.get(src)
         if not stmt or not stmt.get("rows"):
             continue
+        footer = stmt.get("footer") or {}
         out[dst] = {
             "columns": stmt.get("columnDefs", []),
             "period_end_dates": stmt.get("columnDefs_labels", []),
             "rows": {r["label"]: r.get("datum") for r in stmt["rows"]},
+            "currency": footer.get("currency"),
+            "order_of_magnitude": footer.get("orderOfMagnitude"),
         }
     return out
 
