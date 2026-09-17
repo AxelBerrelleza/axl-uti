@@ -30,8 +30,13 @@ def build_dataset(ticker: str) -> dict:
     # (distinct from `currency`, which is the spot-quote trading currency)
     statements = sections.get("statements", {})
     statement_currency = next(
-        filter(None, (statements.get(k, {}).get("currency")
-                      for k in ("income_statement", "balance_sheet", "cash_flow"))),
+        filter(
+            None,
+            (
+                statements.get(k, {}).get("currency")
+                for k in ("income_statement", "balance_sheet", "cash_flow")
+            ),
+        ),
         None,
     )
 
