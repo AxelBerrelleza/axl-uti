@@ -193,10 +193,10 @@ def avg_valuation(data: dict, out: Path):
         cand = [i for i, c in enumerate(cols) if re.fullmatch(r"\d{4}-[QH]\d", c or "")]
         if not cand:
             return None, "avg_valuation current column not recognized"
-        i_cur = cand[0]
-    try:
-        i_5y, i_idx = cols.index("5-Yr"), cols.index("Index")
-    except ValueError:
+        i_cur = max(cand, key=lambda i: cols[i])  # latest quarter if several
+    i_5y = next((cols.index(label) for label in ("5-Yr", "5-Yr Avg") if label in cols), None)
+    i_idx = cols.index("Index") if "Index" in cols else None
+    if i_5y is None or i_idx is None:
         return None, "avg_valuation columns not recognized"
 
     rows = []
